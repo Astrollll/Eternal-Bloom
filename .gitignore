@@ -1,0 +1,7 @@
+# Godot-specific ignores
+.godot/
+*.import
+export/
+
+# OS-specific ignores
+*.log
