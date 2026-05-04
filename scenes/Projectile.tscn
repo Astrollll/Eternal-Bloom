@@ -1,0 +1,30 @@
+[gd_scene format=3 uid="uid://c8n8q4u2p1k7v"]
+
+[ext_resource type="Script" path="res://scripts/Projectile.gd" id="1_script"]
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_1"]
+radius = 4.0
+
+[node name="Projectile" type="Area2D"]
+collision_layer = 0
+collision_mask = 1
+script = ExtResource("1_script")
+
+[node name="CollisionShape2D" type="CollisionShape2D" id="CollisionShape2D_1"]
+shape = SubResource("CircleShape2D_1")
+
+[node name="ColorRect" type="ColorRect" id="ColorRect_1"]
+custom_minimum_size = Vector2(6, 6)
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -3.0
+offset_top = -3.0
+offset_right = 3.0
+offset_bottom = 3.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+color = Color(1, 0.94, 0.45, 1)
