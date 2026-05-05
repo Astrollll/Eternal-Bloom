@@ -6,13 +6,14 @@ class_name Enemy
 @export var attack_range: float = 34.0
 @export var attack_cooldown: float = 0.8
 @export var attack_damage: int = 10
-@export var max_hp: int = 80
+@export var max_hp: int = 180
 @export var hp_bar_offset: Vector2 = Vector2(0, -34)
 
 @onready var sprite: AnimatedSprite2D = $AnimatedSprite2D
 
 const WALK_IDLE_TEX: Texture2D = preload("res://assets/Tiny Wonder Forest 1.0/characters/main character old/walk and idle.png")
 const ATTACK_TEX: Texture2D = preload("res://assets/Tiny Wonder Forest 1.0/characters/main character old/attack and die.png")
+const PlayerAttackModule = preload("res://scripts/modules/PlayerAttack.gd")
 
 var player: CharacterBody2D
 var facing_right: bool = false
@@ -24,6 +25,7 @@ var is_dead: bool = false
 var hp_bar_bg: Line2D
 var hp_bar_fill: Line2D
 var knockback_velocity: Vector2 = Vector2.ZERO
+var death_fade_started: bool = false
 
 func _ready() -> void:
 	add_to_group("enemies")
@@ -37,8 +39,7 @@ func _ready() -> void:
 
 func _physics_process(delta: float) -> void:
 	if is_dead:
-		velocity = knockback_velocity.move_toward(Vector2.ZERO, 1000.0 * delta)
-		move_and_slide()
+		velocity = Vector2.ZERO
 		return
 
 	knockback_velocity = knockback_velocity.move_toward(Vector2.ZERO, 1000.0 * delta)
@@ -86,12 +87,17 @@ func _start_attack(to_player: Vector2) -> void:
 
 	if to_player.length() <= attack_range + 8.0:
 		if player != null and is_instance_valid(player):
+			PlayerAttackModule.spawn_enemy_melee_slash(self , player, to_player, 0.18)
 			if player.has_method("on_hit_by_enemy"):
 				player.call("on_hit_by_enemy", attack_damage, to_player.normalized())
 			elif player.has_method("take_damage"):
 				player.call("take_damage", attack_damage, to_player.normalized())
 
 func _on_animation_finished() -> void:
+	if is_dead and (sprite.animation == &"die_left" or sprite.animation == &"die_right"):
+		_start_death_fade()
+		return
+
 	if sprite.animation == &"attack_left" or sprite.animation == &"attack_right":
 		is_attacking = false
 		_play_idle()
@@ -104,10 +110,10 @@ func _update_walk_anim(dir: Vector2) -> void:
 	if abs(dir.x) >= abs(dir.y):
 		if dir.x > 0.0:
 			facing_right = true
-			_play_anim("walk_right")
+			_play_anim("walk_left")
 		else:
 			facing_right = false
-			_play_anim("walk_left")
+			_play_anim("walk_right")
 	else:
 		if dir.y > 0.0:
 			_play_anim("walk_down")
@@ -134,6 +140,9 @@ func take_damage(amount: int, direction: Vector2 = Vector2.ZERO) -> void:
 	if direction != Vector2.ZERO:
 		knockback_velocity = direction * 400.0
 
+	# Ensure enemy never remains partially transparent from overlapping tweens.
+	modulate = Color(1.0, 1.0, 1.0, 1.0)
+
 	var hit_tw: Tween = create_tween()
 	hit_tw.tween_property(self , "modulate", Color(1.28, 0.72, 0.72, 1.0), 0.05)
 	hit_tw.tween_property(self , "modulate", Color(1.0, 1.0, 1.0, 1.0), 0.08)
@@ -142,16 +151,24 @@ func take_damage(amount: int, direction: Vector2 = Vector2.ZERO) -> void:
 		_die()
 
 func _die() -> void:
+	if is_dead:
+		return
 	is_dead = true
+	death_fade_started = false
 	velocity = Vector2.ZERO
 	collision_layer = 0
 	collision_mask = 0
+	modulate = Color(1.0, 1.0, 1.0, 1.0)
 	_play_anim("die_right" if facing_right else "die_left")
-	
+	sprite.frame = 0
+
+func _start_death_fade() -> void:
+	if death_fade_started:
+		return
+	death_fade_started = true
 	var fade_tw: Tween = create_tween()
-	# Wait for a portion of the death animation to play before fading
-	fade_tw.tween_interval(1.2)
-	fade_tw.tween_property(self , "modulate:a", 0.0, 0.8)
+	fade_tw.tween_interval(0.15)
+	fade_tw.tween_property(self , "modulate:a", 0.0, 0.35)
 	fade_tw.tween_callback(queue_free)
 
 func _setup_hp_bar() -> void:
@@ -182,16 +199,16 @@ func _build_sprite_frames() -> void:
 	if sprite == null:
 		return
 	var frames: SpriteFrames = SpriteFrames.new()
-	_add_anim(frames, "idle_left", WALK_IDLE_TEX, [Vector2i(0, 3), Vector2i(1, 3)], 6.0, true)
-	_add_anim(frames, "idle_right", WALK_IDLE_TEX, [Vector2i(0, 1), Vector2i(1, 1)], 6.0, true)
-	_add_anim(frames, "walk_down", WALK_IDLE_TEX, [Vector2i(0, 0), Vector2i(1, 0), Vector2i(2, 0), Vector2i(3, 0)], 10.0, true)
+	_add_anim(frames, "idle_left", WALK_IDLE_TEX, [Vector2i(0, 0), Vector2i(1, 0)], 6.0, true)
+	_add_anim(frames, "idle_right", WALK_IDLE_TEX, [Vector2i(2, 0), Vector2i(3, 0)], 6.0, true)
+	_add_anim(frames, "walk_down", WALK_IDLE_TEX, [Vector2i(0, 1), Vector2i(1, 1), Vector2i(2, 1), Vector2i(3, 1)], 10.0, true)
 	_add_anim(frames, "walk_up", WALK_IDLE_TEX, [Vector2i(0, 2), Vector2i(1, 2), Vector2i(2, 2), Vector2i(3, 2)], 10.0, true)
-	_add_anim(frames, "walk_left", WALK_IDLE_TEX, [Vector2i(0, 3), Vector2i(1, 3), Vector2i(2, 3), Vector2i(3, 3)], 10.0, true)
-	_add_anim(frames, "walk_right", WALK_IDLE_TEX, [Vector2i(0, 1), Vector2i(1, 1), Vector2i(2, 1), Vector2i(3, 1)], 10.0, true)
-	_add_anim(frames, "attack_left", ATTACK_TEX, [Vector2i(0, 3), Vector2i(1, 3), Vector2i(2, 3), Vector2i(3, 3)], 14.0, false)
-	_add_anim(frames, "attack_right", ATTACK_TEX, [Vector2i(0, 1), Vector2i(1, 1), Vector2i(2, 1), Vector2i(3, 1)], 14.0, false)
-	_add_anim(frames, "die_left", ATTACK_TEX, [Vector2i(4, 3), Vector2i(5, 3), Vector2i(6, 3), Vector2i(7, 3)], 8.0, false)
-	_add_anim(frames, "die_right", ATTACK_TEX, [Vector2i(4, 1), Vector2i(5, 1), Vector2i(6, 1), Vector2i(7, 1)], 8.0, false)
+	_add_anim(frames, "walk_left", WALK_IDLE_TEX, [Vector2i(4, 2), Vector2i(5, 2), Vector2i(6, 2), Vector2i(7, 2)], 10.0, true)
+	_add_anim(frames, "walk_right", WALK_IDLE_TEX, [Vector2i(4, 1), Vector2i(5, 1), Vector2i(6, 1), Vector2i(7, 1)], 10.0, true)
+	_add_anim(frames, "attack_left", ATTACK_TEX, [Vector2i(0, 0), Vector2i(1, 0), Vector2i(2, 0), Vector2i(3, 0), Vector2i(4, 0)], 14.0, false)
+	_add_anim(frames, "attack_right", ATTACK_TEX, [Vector2i(0, 2), Vector2i(1, 2), Vector2i(2, 2), Vector2i(3, 2), Vector2i(4, 2)], 14.0, false)
+	_add_anim(frames, "die_left", ATTACK_TEX, [Vector2i(0, 1), Vector2i(1, 1), Vector2i(2, 1), Vector2i(3, 1)], 8.0, false)
+	_add_anim(frames, "die_right", ATTACK_TEX, [Vector2i(0, 3), Vector2i(1, 3), Vector2i(2, 3), Vector2i(3, 3)], 8.0, false)
 	sprite.sprite_frames = frames
 
 func _add_anim(frames: SpriteFrames, anim_name: StringName, atlas: Texture2D, cells: Array[Vector2i], speed: float, loop: bool) -> void:

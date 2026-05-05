@@ -281,4 +281,3 @@ enabled = false
 
 [node name="SkinOverlay" type="AnimatedSprite2D" parent="." unique_id=1265301112]
 scale = Vector2(2, 2)
-animation = &"attack_left"

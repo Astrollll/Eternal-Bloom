@@ -13,6 +13,8 @@ static func build_skin_frames(walk_idle_tex: Texture2D, attack_tex: Texture2D) -
 	_add_skin_anim(frames, "walk_right", walk_idle_tex, [Vector2i(4, 1), Vector2i(5, 1), Vector2i(6, 1), Vector2i(7, 1)], 10.0, true)
 	_add_skin_anim(frames, "attack_left", attack_tex, [Vector2i(0, 0), Vector2i(1, 0), Vector2i(2, 0), Vector2i(3, 0), Vector2i(4, 0)], 14.0, false)
 	_add_skin_anim(frames, "attack_right", attack_tex, [Vector2i(0, 2), Vector2i(1, 2), Vector2i(2, 2), Vector2i(3, 2), Vector2i(4, 2)], 14.0, false)
+	_add_skin_anim(frames, "die_left", attack_tex, [Vector2i(0, 1), Vector2i(1, 1), Vector2i(2, 1), Vector2i(3, 1)], 8.0, false)
+	_add_skin_anim(frames, "die_right", attack_tex, [Vector2i(0, 3), Vector2i(1, 3), Vector2i(2, 3), Vector2i(3, 3)], 8.0, false)
 	return frames
 
 static func _add_skin_anim(frames: SpriteFrames, anim_name: StringName, atlas: Texture2D, cells: Array[Vector2i], speed: float, loop: bool) -> void:

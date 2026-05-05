@@ -1,5 +1,6 @@
 63f7b34db8d8cdea90c76aacccf841ec
-::res://::1777883942
+::res://::1777943060
+icon.svg::CompressedTexture2D::3060874518664851737::1777943117::1777943119::1::::<><><>0<>0<>c576ed999b66331ae6dd44394a85467b<>res://.godot/imported/icon.svg-218a8f2b3041327d8a5756f3a245f83b.ctex::
 ::res://assets/::1777875429
 Game Boy Advance - The Legend of Zelda_ The Minish Cap - Playable Characters - Link (Cap).png::CompressedTexture2D::6679029193493487068::1777108076::1777108607::1::::<><><>0<>0<>3991532bee31d7cbd4adf22362f572f2<>res://.godot/imported/Game Boy Advance - The Legend of Zelda_ The Minish Cap - Playable Characters - Link (Cap).png-bf2012a665f791a7cd0ecf9b5d94d41d.ctex::
 ::res://assets/Tiny Wonder Forest 1.0/::1777875445
@@ -45,25 +46,25 @@ winter outside.png::CompressedTexture2D::1277409717123433551::1677724930::177787
 ::res://scenes/::1777880675
 Bullet.tscn::PackedScene::-1::1777105661::0::1::::<><><>0<>0<><>::
 CameraShake.tscn::PackedScene::-1::1777876265::0::1::::<><><>0<>0<><>::res://scripts/modules/CameraShake.gd
-Enemy.tscn::PackedScene::-1::1777878470::0::1::::<><><>0<>0<><>::res://scripts/Enemy.gd
+Enemy.tscn::PackedScene::-1::1777941904::0::1::::<><><>0<>0<><>::res://scripts/Enemy.gd
 ImpactBurst.tscn::PackedScene::-1::1777876257::0::1::::<><><>0<>0<><>::res://scripts/modules/ImpactBurst.gd
 Main.tscn::PackedScene::6437221966067421414::1777878470::0::1::::<><><>0<>0<><>::uid://ch8caas03dhl::::res://scenes/player.tscn<>res://scenes/Enemy.tscn
 PetBlueMushroom.tscn::PackedScene::2154978992241418693::1777273813::0::1::::<><><>0<>0<><>::uid://c5mbb7aepqcbi::::res://scripts/PetBlueMushroom.gd<>uid://cs7ck31fux15h::::res://assets/Tiny Wonder Forest 1.0/characters/mushrooms/blue mushroom sheet.png
-player.tscn::PackedScene::156835564755936565::1777879088::0::1::::<><><>0<>0<><>::uid://uf3yhi0kq6c::::res://scripts/Player.gd<>uid://b1nserjjqv8ni::::res://assets/Tiny Wonder Forest 1.0/characters/main character/walk and idle.png<>uid://da7eriq5tli1o::::res://assets/Tiny Wonder Forest 1.0/characters/main character/attack and die.png
-Projectile.tscn::PackedScene::7117943907028898077::1777880675::0::1::::<><><>0<>0<><>::res://scripts/Projectile.gd
-SlashImpact.tscn::PackedScene::-1::1777877761::0::1::::<><><>0<>0<><>::res://scripts/modules/SlashImpact.gd
+player.tscn::PackedScene::156835564755936565::1777941904::0::1::::<><><>0<>0<><>::uid://uf3yhi0kq6c::::res://scripts/Player.gd<>uid://b1nserjjqv8ni::::res://assets/Tiny Wonder Forest 1.0/characters/main character/walk and idle.png<>uid://da7eriq5tli1o::::res://assets/Tiny Wonder Forest 1.0/characters/main character/attack and die.png
+Projectile.tscn::PackedScene::7117943907028898077::1777942995::0::1::::<><><>0<>0<><>::res://scripts/Projectile.gd
+SlashImpact.tscn::PackedScene::-1::1777941536::0::1::::<><><>0<>0<><>::res://scripts/modules/SlashImpact.gd
 ::res://scripts/::1777879838
-Enemy.gd::GDScript::8484147494113025884::1777883818::0::1::::Enemy<>CharacterBody2D<><>0<>0<><>::
+Enemy.gd::GDScript::8484147494113025884::1777942237::0::1::::Enemy<>CharacterBody2D<><>0<>0<><>::
 GameManager.gd::GDScript::2284062296796153061::1777105820::0::1::::<>Node<><>0<>0<><>::
 PetBlueMushroom.gd::GDScript::6903343393312184866::1777877195::0::1::::<>StaticBody2D<><>0<>0<><>::
-Player.gd::GDScript::41642414045703680::1777883817::0::1::::<>CharacterBody2D<><>0<>0<><>::
-Projectile.gd::GDScript::1134398065504854488::1777880671::0::1::::<>Area2D<><>0<>0<><>::
+Player.gd::GDScript::41642414045703680::1777942435::0::1::::<>CharacterBody2D<><>0<>0<><>::
+Projectile.gd::GDScript::1134398065504854488::1777943117::0::1::::<>Area2D<><>0<>0<><>::
 ::res://scripts/modules/::1777876287
 CameraShake.gd::GDScript::7239410242877211634::1777877420::0::1::::CameraShake<>Node<><>0<>0<><>::
 DashVFX.gd::GDScript::1236918700882416108::1777877408::0::1::::DashVFX<>RefCounted<><>0<>0<><>::
 ImpactBurst.gd::GDScript::3897548706662492177::1777877408::0::1::::ImpactBurst<>Node2D<><>0<>0<><>::
-PlayerAttack.gd::GDScript::5111484242035789822::1777881532::0::1::::PlayerAttack<>RefCounted<><>0<>0<><>::
-PlayerCombat.gd::GDScript::8483273822360215352::1777873277::0::1::::PlayerCombat<>RefCounted<><>0<>0<><>::
+PlayerAttack.gd::GDScript::5111484242035789822::1777942130::0::1::::PlayerAttack<>RefCounted<><>0<>0<><>::
+PlayerCombat.gd::GDScript::8483273822360215352::1777940745::0::1::::PlayerCombat<>RefCounted<><>0<>0<><>::
 PlayerInput.gd::GDScript::1527739082409931082::1777873277::0::1::::PlayerInput<>RefCounted<><>0<>0<><>::
-PlayerSkin.gd::GDScript::7579775280429197831::1777883818::0::1::::PlayerSkin<>RefCounted<><>0<>0<><>::
-SlashImpact.gd::GDScript::4224729594489540014::1777878038::0::1::::SlashImpact<>Node2D<><>0<>0<><>::
+PlayerSkin.gd::GDScript::7579775280429197831::1777941403::0::1::::PlayerSkin<>RefCounted<><>0<>0<><>::
+SlashImpact.gd::GDScript::4224729594489540014::1777941536::0::1::::SlashImpact<>Node2D<><>0<>0<><>::

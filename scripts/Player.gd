@@ -9,10 +9,11 @@ extends CharacterBody2D
 @export var afterimage_fade_time: float = 0.12
 @export var afterimage_alpha: float = 0.34
 @export var attack_range: float = 24.0
+@export var melee_trigger_bonus: float = 34.0
 @export var attack_half_size: Vector2 = Vector2(12, 10)
 @export var attack_collision_mask: int = 1
 @export var attack_impact_fade_time: float = 0.15
-@export var max_hp: int = 100
+@export var max_hp: int = 220
 @export var hp_bar_offset: Vector2 = Vector2(0, -34)
 @onready var sprite: AnimatedSprite2D = $AnimatedSprite2D
 
@@ -21,6 +22,8 @@ const PlayerInputModule = preload("res://scripts/modules/PlayerInput.gd")
 const PlayerCombatModule = preload("res://scripts/modules/PlayerCombat.gd")
 const PlayerSkinModule = preload("res://scripts/modules/PlayerSkin.gd")
 const PlayerAttackModule = preload("res://scripts/modules/PlayerAttack.gd")
+const FRAME_SIZE: int = 24
+const BASE_ATTACK_TEX: Texture2D = preload("res://assets/Tiny Wonder Forest 1.0/characters/main character/attack and die.png")
 const SKIN_WALK_IDLE_TEX: Texture2D = preload("res://assets/Tiny Wonder Forest 1.0/characters/main character old/cat kigurumi walk and idle.png")
 const SKIN_ATTACK_TEX: Texture2D = preload("res://assets/Tiny Wonder Forest 1.0/characters/main character/cat kigurumi attack and die.png")
 
@@ -37,10 +40,12 @@ var hp_bar_bg: Line2D
 var hp_bar_fill: Line2D
 var knockback_velocity: Vector2 = Vector2.ZERO
 var is_dead: bool = false
+var death_fade_started: bool = false
 
 func _ready() -> void:
 	get_tree().paused = false
 	PlayerInputModule.ensure_actions()
+	_ensure_death_animations()
 	_setup_skin_overlay()
 	_setup_hp_bar()
 	current_hp = max_hp
@@ -50,8 +55,7 @@ func _ready() -> void:
 
 func _physics_process(delta: float) -> void:
 	if is_dead:
-		velocity = knockback_velocity.move_toward(Vector2.ZERO, 1000.0 * delta)
-		move_and_slide()
+		velocity = Vector2.ZERO
 		return
 
 	# Gradually decay knockback over time
@@ -102,10 +106,10 @@ func _physics_process(delta: float) -> void:
 	if abs(direction.x) >= abs(direction.y):
 		if direction.x > 0.0:
 			facing_right = true
-			_play_anim("walk_right")
+			_play_anim("walk_left")
 		else:
 			facing_right = false
-			_play_anim("walk_left")
+			_play_anim("walk_right")
 	else:
 		if direction.y > 0.0:
 			_play_anim("walk_down")
@@ -120,9 +124,10 @@ func _start_attack() -> void:
 	
 	var target = _get_nearest_enemy()
 	var dist = global_position.distance_to(target.global_position) if target else INF
+	var melee_trigger_range: float = attack_range + melee_trigger_bonus
 	
 	# If target is within melee range (with a small buffer), swing sword
-	if dist <= attack_range + 16.0:
+	if target != null and dist <= melee_trigger_range:
 		_play_anim(PlayerCombatModule.attack_animation_for_facing(facing_right))
 		PlayerAttackModule.apply_melee_hit(
 			self , facing_right, attack_range, attack_half_size,
@@ -135,6 +140,10 @@ func _start_attack() -> void:
 		PlayerAttackModule.shoot_projectile(self , shoot_dir, attack_collision_mask)
 
 func _on_sprite_animation_finished() -> void:
+	if is_dead and (sprite.animation == &"die_left" or sprite.animation == &"die_right"):
+		_start_death_fade()
+		return
+
 	if PlayerCombatModule.is_attack_animation(sprite.animation):
 		is_attacking = false
 		_play_anim(PlayerCombatModule.idle_animation_for_facing(facing_right))
@@ -160,6 +169,7 @@ func _setup_skin_overlay() -> void:
 
 	if skin_sprite.sprite_frames == null:
 		skin_sprite.sprite_frames = PlayerSkinModule.build_skin_frames(SKIN_WALK_IDLE_TEX, SKIN_ATTACK_TEX)
+	_ensure_skin_death_animations()
 
 	skin_sprite.scale = sprite.scale
 	skin_sprite.position = skin_overlay_offset
@@ -286,7 +296,7 @@ func change_skin(walk_idle_tex: Texture2D, attack_tex: Texture2D) -> void:
 		skin_sprite.play(sprite.animation)
 
 func take_damage(amount: int, knock_dir: Vector2 = Vector2.ZERO) -> void:
-	if amount <= 0:
+	if is_dead or amount <= 0:
 		return
 	current_hp = max(0, current_hp - amount)
 	_update_hp_bar()
@@ -303,16 +313,51 @@ func take_damage(amount: int, knock_dir: Vector2 = Vector2.ZERO) -> void:
 		_die()
 
 func _die() -> void:
+	if is_dead:
+		return
 	is_dead = true
+	death_fade_started = false
 	velocity = Vector2.ZERO
 	collision_layer = 0
 	collision_mask = 0
+	modulate = Color(1.0, 1.0, 1.0, 1.0)
 	_play_anim("die_right" if facing_right else "die_left")
-	
+	sprite.frame = 0
+	if skin_sprite != null and skin_sprite.visible:
+		skin_sprite.frame = 0
+
+func _start_death_fade() -> void:
+	if death_fade_started:
+		return
+	death_fade_started = true
 	var fade_tw: Tween = create_tween()
-	fade_tw.tween_interval(1.5)
-	fade_tw.tween_property(self , "modulate:a", 0.0, 1.0)
+	fade_tw.tween_interval(0.15)
+	fade_tw.tween_property(self , "modulate:a", 0.0, 0.35)
 	fade_tw.tween_callback(queue_free)
 
 func on_hit_by_enemy(amount: int, direction: Vector2 = Vector2.ZERO) -> void:
 	take_damage(amount, direction)
+
+func _ensure_death_animations() -> void:
+	if sprite == null or sprite.sprite_frames == null:
+		return
+	_replace_death_animation(sprite.sprite_frames, &"die_left", BASE_ATTACK_TEX, 1)
+	_replace_death_animation(sprite.sprite_frames, &"die_right", BASE_ATTACK_TEX, 3)
+
+func _ensure_skin_death_animations() -> void:
+	if skin_sprite == null or skin_sprite.sprite_frames == null:
+		return
+	_replace_death_animation(skin_sprite.sprite_frames, &"die_left", SKIN_ATTACK_TEX, 1)
+	_replace_death_animation(skin_sprite.sprite_frames, &"die_right", SKIN_ATTACK_TEX, 3)
+
+func _replace_death_animation(frames: SpriteFrames, anim_name: StringName, atlas: Texture2D, row: int) -> void:
+	if frames.has_animation(anim_name):
+		frames.remove_animation(anim_name)
+	frames.add_animation(anim_name)
+	frames.set_animation_speed(anim_name, 8.0)
+	frames.set_animation_loop(anim_name, false)
+	for col in range(0, 4):
+		var frame := AtlasTexture.new()
+		frame.atlas = atlas
+		frame.region = Rect2(col * FRAME_SIZE, row * FRAME_SIZE, FRAME_SIZE, FRAME_SIZE)
+		frames.add_frame(anim_name, frame)

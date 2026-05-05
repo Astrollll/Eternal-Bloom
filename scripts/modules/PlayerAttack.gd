@@ -70,6 +70,20 @@ static func apply_melee_hit(
 		# brief flash on hit targets to make impacts more visible
 		flash_node_on_hit(collider, 0.08)
 
+static func spawn_enemy_melee_slash(owner: Node2D, target: Node2D, direction: Vector2, fade_time: float = 0.17) -> void:
+	if owner == null or target == null:
+		return
+	var root := owner.get_tree().current_scene
+	if root == null:
+		return
+
+	var dir := direction.normalized() if direction != Vector2.ZERO else (target.global_position - owner.global_position).normalized()
+	if dir == Vector2.ZERO:
+		dir = Vector2.RIGHT
+
+	var hit_pos := target.global_position - dir * 4.0
+	spawn_slash_impact(owner, root, hit_pos, dir, fade_time, target)
+
 static func facing_direction(facing_right: bool) -> Vector2:
 	return Vector2.RIGHT if facing_right else Vector2.LEFT
 
@@ -97,15 +111,51 @@ static func shoot_projectile(owner: Node2D, direction: Vector2, mask: int) -> vo
 	if not bullet_node:
 		return
 	var bullet = bullet_node as Area2D
+	if bullet == null:
+		return
+
+	var target := _find_nearest_enemy(owner)
+	var final_dir := direction.normalized() if direction != Vector2.ZERO else Vector2.RIGHT
+	if target != null:
+		final_dir = (target.global_position - owner.global_position).normalized()
+		if final_dir == Vector2.ZERO:
+			final_dir = direction.normalized() if direction != Vector2.ZERO else Vector2.RIGHT
 		
 	owner.get_tree().current_scene.add_child(bullet)
-	bullet.global_position = owner.global_position + direction * 10.0
+	bullet.global_position = owner.global_position + final_dir * 14.0
 	bullet.collision_mask = mask
-	bullet.velocity = direction * 700.0
-	bullet.callback = func(target): _apply_damage_callback(target, direction)
+	bullet.velocity = final_dir * 700.0
+	bullet.source = owner
+	bullet.target = target
+	bullet.callback = func(hit_target: Object) -> void:
+		if hit_target == null:
+			return
+		if not (hit_target is Node):
+			return
+		var hit_node := hit_target as Node
+		if not hit_node.is_in_group("enemies"):
+			return
+		_apply_damage_callback(hit_target, final_dir)
 	
 	# Optional: Small camera shake on shot for "kick"
 	camera_shake(owner.get_tree().current_scene, 2.0, 0.08)
+
+static func _find_nearest_enemy(owner: Node2D) -> Node2D:
+	if owner == null or owner.get_tree() == null:
+		return null
+	var nearest: Node2D = null
+	var min_dist := INF
+	for e in owner.get_tree().get_nodes_in_group("enemies"):
+		if not is_instance_valid(e):
+			continue
+		if not (e is Node2D):
+			continue
+		var node := e as Node2D
+		var d := owner.global_position.distance_to(node.global_position)
+		if d < min_dist:
+			min_dist = d
+			nearest = node
+	return nearest
 
 static func _apply_damage_callback(collider: Object, direction: Vector2) -> void:
 	if collider == null:

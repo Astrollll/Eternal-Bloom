@@ -10,21 +10,19 @@ collision_layer = 0
 collision_mask = 1
 script = ExtResource("1_script")
 
-[node name="CollisionShape2D" type="CollisionShape2D" id="CollisionShape2D_1"]
+[node name="CollisionShape2D" type="CollisionShape2D" parent="." id="CollisionShape2D_1"]
 shape = SubResource("CircleShape2D_1")
 
-[node name="ColorRect" type="ColorRect" id="ColorRect_1"]
-custom_minimum_size = Vector2(6, 6)
-anchors_preset = 8
-anchor_left = 0.5
-anchor_top = 0.5
-anchor_right = 0.5
-anchor_bottom = 0.5
-offset_left = -3.0
-offset_top = -3.0
-offset_right = 3.0
-offset_bottom = 3.0
-grow_horizontal = 2
-grow_vertical = 2
-mouse_filter = 2
-color = Color(1, 0.94, 0.45, 1)
+[node name="BulletVisual" type="Polygon2D" parent="." id="Polygon2D_1"]
+color = Color(0.38, 1, 0.34, 0.95)
+
+[node name="GlowVisual" type="Polygon2D" parent="." id="Polygon2D_2"]
+color = Color(0.78, 1, 0.58, 0.25)
+
+[node name="TrailParticles" type="GPUParticles2D" parent="." id="GPUParticles2D_1"]
+emitting = false
+lifetime = 0.34
+explosiveness = 0.0
+amount = 64
+one_shot = false
+local_coords = true
