@@ -104,6 +104,12 @@ static func camera_shake(root: Node, strength: float = 4.0, duration: float = 0.
 	tw.tween_property(cam, "offset", orig, duration * 0.6)
 
 static func shoot_projectile(owner: Node2D, direction: Vector2, mask: int) -> void:
+	spawn_projectile(owner, direction, mask, false)
+
+static func shoot_enemy_projectile(owner: Node2D, direction: Vector2, mask: int) -> void:
+	spawn_projectile(owner, direction, mask, true)
+
+static func spawn_projectile(owner: Node2D, direction: Vector2, mask: int, enemy_style: bool) -> void:
 	if owner == null or ProjectileScene == null:
 		return
 	
@@ -114,7 +120,7 @@ static func shoot_projectile(owner: Node2D, direction: Vector2, mask: int) -> vo
 	if bullet == null:
 		return
 
-	var target := _find_nearest_enemy(owner)
+	var target := _find_player_target(owner) if enemy_style else _find_nearest_enemy(owner)
 	var final_dir := direction.normalized() if direction != Vector2.ZERO else Vector2.RIGHT
 	if target != null:
 		final_dir = (target.global_position - owner.global_position).normalized()
@@ -124,17 +130,25 @@ static func shoot_projectile(owner: Node2D, direction: Vector2, mask: int) -> vo
 	owner.get_tree().current_scene.add_child(bullet)
 	bullet.global_position = owner.global_position + final_dir * 14.0
 	bullet.collision_mask = mask
-	bullet.velocity = final_dir * 700.0
+	bullet.velocity = final_dir * (920.0 if enemy_style else 700.0)
+	bullet.speed = 920.0 if enemy_style else 700.0
+	bullet.homing_strength = 0.0 if enemy_style else 10.0
 	bullet.source = owner
-	bullet.target = target
+	bullet.target = target if not enemy_style else null
+	if bullet.has_method("set_projectile_style"):
+		bullet.call("set_projectile_style", "enemy" if enemy_style else "player")
 	bullet.callback = func(hit_target: Object) -> void:
 		if hit_target == null:
 			return
 		if not (hit_target is Node):
 			return
 		var hit_node := hit_target as Node
-		if not hit_node.is_in_group("enemies"):
-			return
+		if enemy_style:
+			if hit_node.name != "Player" and not hit_node.is_in_group("player"):
+				return
+		else:
+			if not hit_node.is_in_group("enemies"):
+				return
 		_apply_damage_callback(hit_target, final_dir)
 	
 	# Optional: Small camera shake on shot for "kick"
@@ -156,6 +170,14 @@ static func _find_nearest_enemy(owner: Node2D) -> Node2D:
 			min_dist = d
 			nearest = node
 	return nearest
+
+static func _find_player_target(owner: Node2D) -> Node2D:
+	if owner == null or owner.get_tree() == null:
+		return null
+	var scene := owner.get_tree().current_scene
+	if scene == null:
+		return null
+	return scene.get_node_or_null("Player") as Node2D
 
 static func _apply_damage_callback(collider: Object, direction: Vector2) -> void:
 	if collider == null:

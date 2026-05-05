@@ -1,7 +1,7 @@
 extends CharacterBody2D
 
 @export var speed: float = 250.0
-@export var skin_overlay_offset: Vector2 = Vector2(0, -4)
+@export var skin_overlay_offset: Vector2 = Vector2.ZERO
 @export var dash_speed: float = 820.0
 @export var dash_duration: float = 0.14
 @export var dash_cooldown: float = 0.45
@@ -172,7 +172,7 @@ func _setup_skin_overlay() -> void:
 	_ensure_skin_death_animations()
 
 	skin_sprite.scale = sprite.scale
-	skin_sprite.position = skin_overlay_offset
+	skin_sprite.position = sprite.position + skin_overlay_offset
 	skin_sprite.z_index = sprite.z_index + 1
 	if skin_sprite.sprite_frames != null and skin_sprite.sprite_frames.has_animation(sprite.animation):
 		skin_sprite.play(sprite.animation)
@@ -239,6 +239,8 @@ func _play_anim(anim_name: StringName) -> void:
 func _sync_skin_to_base() -> void:
 	if skin_sprite == null:
 		return
+	skin_sprite.position = sprite.position + skin_overlay_offset
+	skin_sprite.scale = sprite.scale
 	if skin_sprite.animation != sprite.animation:
 		skin_sprite.play(sprite.animation)
 	skin_sprite.frame = sprite.frame

@@ -13,17 +13,23 @@ var target: Node2D = null
 @onready var bullet_visual: Polygon2D = get_node_or_null("BulletVisual") as Polygon2D
 @onready var glow_visual: Polygon2D = get_node_or_null("GlowVisual") as Polygon2D
 @onready var trail_particles: GPUParticles2D = get_node_or_null("TrailParticles") as GPUParticles2D
+@onready var enemy_bullet_line: Line2D = get_node_or_null("EnemyBulletLine") as Line2D
+@onready var enemy_bullet_glow: Line2D = get_node_or_null("EnemyBulletGlow") as Line2D
 
 var _bullet_base_polygon: PackedVector2Array = PackedVector2Array()
 var _glow_base_polygon: PackedVector2Array = PackedVector2Array()
+var _enemy_line_base_points: PackedVector2Array = PackedVector2Array()
+var _enemy_glow_base_points: PackedVector2Array = PackedVector2Array()
 var _life_time: float = 0.0
 var _trail_time_left: float = 0.0
 var _ribbon_time_left: float = 0.0
 var _approach_fx_played: bool = false
 var _trail_texture: Texture2D
+var _projectile_style: StringName = &"player"
 
 func _ready() -> void:
-	body_entered.connect(_on_body_entered)
+	# connect signal to explicit Callable to avoid inference/connect issues
+	self.body_entered.connect(Callable(self , "_on_body_entered"))
 	_build_visuals()
 	_setup_trail_particles()
 	_start_visual_motion()
@@ -33,7 +39,8 @@ func _ready() -> void:
 		rotation = velocity.angle()
 	
 	# Auto-destruct after 1.5 seconds to prevent memory leaks
-	get_tree().create_timer(1.5).timeout.connect(queue_free)
+	var t := get_tree().create_timer(1.5)
+	t.timeout.connect(Callable(self , "queue_free"))
 
 func _physics_process(delta: float) -> void:
 	_life_time += delta
@@ -60,6 +67,7 @@ func _physics_process(delta: float) -> void:
 	global_position += velocity * delta
 
 func _start_visual_motion() -> void:
+	_apply_style_visuals()
 	if bullet_visual != null:
 		var bullet_mat := CanvasItemMaterial.new()
 		bullet_mat.blend_mode = CanvasItemMaterial.BLEND_MODE_ADD
@@ -69,6 +77,14 @@ func _start_visual_motion() -> void:
 		var glow_mat := CanvasItemMaterial.new()
 		glow_mat.blend_mode = CanvasItemMaterial.BLEND_MODE_ADD
 		glow_visual.material = glow_mat
+	if enemy_bullet_line != null:
+		var line_mat := CanvasItemMaterial.new()
+		line_mat.blend_mode = CanvasItemMaterial.BLEND_MODE_ADD
+		enemy_bullet_line.material = line_mat
+	if enemy_bullet_glow != null:
+		var line_glow_mat := CanvasItemMaterial.new()
+		line_glow_mat.blend_mode = CanvasItemMaterial.BLEND_MODE_ADD
+		enemy_bullet_glow.material = line_glow_mat
 
 	# Orb-like bullet motion: slight pulse instead of a static slash.
 	scale = Vector2(0.72, 0.72)
@@ -85,6 +101,8 @@ func _start_visual_motion() -> void:
 func _build_visuals() -> void:
 	_bullet_base_polygon = _make_circle_polygon(8, 7.0)
 	_glow_base_polygon = _make_circle_polygon(10, 11.5)
+	_enemy_line_base_points = PackedVector2Array([Vector2(-14, 0), Vector2(-8, 0), Vector2(8, 0), Vector2(14, 0)])
+	_enemy_glow_base_points = PackedVector2Array([Vector2(-18, 0), Vector2(-10, 0), Vector2(10, 0), Vector2(18, 0)])
 
 	if bullet_visual != null:
 		bullet_visual.polygon = _bullet_base_polygon
@@ -94,6 +112,30 @@ func _build_visuals() -> void:
 		glow_visual.polygon = _glow_base_polygon
 		glow_visual.color = Color(0.64, 1.0, 0.5, 0.22)
 		glow_visual.scale = Vector2.ONE
+	if enemy_bullet_line != null:
+		enemy_bullet_line.points = PackedVector2Array([Vector2(-10, 0), Vector2(-5, 0), Vector2(5, 0), Vector2(10, 0)])
+		enemy_bullet_line.width = 2.6
+		enemy_bullet_line.default_color = Color(1.0, 0.28, 0.26, 0.92)
+	if enemy_bullet_glow != null:
+		enemy_bullet_glow.points = PackedVector2Array([Vector2(-14, 0), Vector2(-7, 0), Vector2(7, 0), Vector2(14, 0)])
+		enemy_bullet_glow.width = 5.2
+		enemy_bullet_glow.default_color = Color(1.0, 0.46, 0.34, 0.22)
+
+func set_projectile_style(style: StringName) -> void:
+	_projectile_style = style
+	_apply_style_visuals()
+	_apply_trail_style()
+
+func _apply_style_visuals() -> void:
+	var enemy_style := _projectile_style == &"enemy"
+	if bullet_visual != null:
+		bullet_visual.visible = not enemy_style
+	if glow_visual != null:
+		glow_visual.visible = not enemy_style
+	if enemy_bullet_line != null:
+		enemy_bullet_line.visible = enemy_style
+	if enemy_bullet_glow != null:
+		enemy_bullet_glow.visible = enemy_style
 
 func _setup_trail_particles() -> void:
 	if trail_particles == null:
@@ -123,8 +165,9 @@ func _setup_trail_particles() -> void:
 	mat.scale_max = 0.78
 	mat.hue_variation_min = -0.03
 	mat.hue_variation_max = 0.03
-	mat.color = Color(0.46, 1.0, 0.32, 1.0)
+	mat.color = Color(1.0, 1.0, 1.0, 1.0)
 	trail_particles.process_material = mat
+	_apply_trail_style()
 
 func _get_trail_texture() -> Texture2D:
 	if _trail_texture != null:
@@ -135,9 +178,17 @@ func _get_trail_texture() -> Texture2D:
 		for y in range(12):
 			var d := Vector2(x - 5.5, y - 5.5).length()
 			var a := clampf(1.0 - (d / 5.5), 0.0, 1.0)
-			img.set_pixel(x, y, Color(0.38, 1.0, 0.26, a))
+			img.set_pixel(x, y, Color(1.0, 1.0, 1.0, a))
 	_trail_texture = ImageTexture.create_from_image(img)
 	return _trail_texture
+
+func _apply_trail_style() -> void:
+	var enemy_style := _projectile_style == &"enemy"
+	if trail_particles != null:
+		var mat := trail_particles.process_material as ParticleProcessMaterial
+		if mat != null:
+			mat.color = Color(1.0, 0.34, 0.26, 1.0) if enemy_style else Color(0.46, 1.0, 0.32, 1.0)
+		trail_particles.modulate = Color(1.0, 0.24, 0.18, 1.0) if enemy_style else Color(0.52, 1.0, 0.34, 1.0)
 
 func _make_circle_polygon(points_count: int, radius: float) -> PackedVector2Array:
 	var poly := PackedVector2Array()
@@ -159,21 +210,34 @@ func _animate_bullet_shape(t: float, proximity: float) -> void:
 	var approach_boost := 1.0 + proximity * 0.38
 	var scale_value := 1.0 + pulse
 	var glow_scale := 1.0 + pulse * 1.45 + proximity * 0.18
+	var enemy_style := _projectile_style == &"enemy"
 
-	if bullet_visual != null:
+	if bullet_visual != null and not enemy_style:
 		bullet_visual.scale = Vector2(scale_value, scale_value) * approach_boost
 		bullet_visual.rotation = sin(t * 12.0) * 0.08
 		bullet_visual.color = Color(0.28, 1.0, 0.24, lerpf(0.82, 1.0, proximity))
 
-	if glow_visual != null:
+	if glow_visual != null and not enemy_style:
 		glow_visual.scale = Vector2(glow_scale, glow_scale) * approach_boost
 		glow_visual.rotation = - sin(t * 10.0) * 0.06
 		glow_visual.color = Color(0.62, 1.0, 0.48, lerpf(0.14, 0.34, proximity))
 
+	if enemy_bullet_line != null and enemy_style:
+		enemy_bullet_line.scale = Vector2(0.82 + proximity * 0.22, 1.0)
+		enemy_bullet_line.rotation = sin(t * 10.0) * 0.03
+		enemy_bullet_line.width = lerpf(2.2, 3.2, proximity)
+		enemy_bullet_line.default_color = Color(1.0, 0.2, 0.18, lerpf(0.9, 1.0, proximity))
+
+	if enemy_bullet_glow != null and enemy_style:
+		enemy_bullet_glow.scale = Vector2(0.9 + proximity * 0.25, 1.0)
+		enemy_bullet_glow.rotation = - sin(t * 8.0) * 0.025
+		enemy_bullet_glow.width = lerpf(4.6, 6.0, proximity)
+		enemy_bullet_glow.default_color = Color(1.0, 0.42, 0.32, lerpf(0.14, 0.28, proximity))
+
 	if trail_particles != null:
 		trail_particles.amount_ratio = lerpf(0.82, 1.0, proximity)
 		trail_particles.speed_scale = lerpf(1.05, 1.6, proximity)
-		trail_particles.modulate = Color(0.52, 1.0, 0.34, lerpf(0.82, 1.0, proximity))
+		trail_particles.modulate = Color(1.0, 0.26, 0.22, lerpf(0.88, 1.0, proximity)) if enemy_style else Color(0.52, 1.0, 0.34, lerpf(0.82, 1.0, proximity))
 
 func _emit_trail(delta: float, proximity: float) -> void:
 	if trail_particles == null:
@@ -181,6 +245,8 @@ func _emit_trail(delta: float, proximity: float) -> void:
 	trail_particles.emitting = true
 	trail_particles.amount_ratio = lerpf(0.82, 1.0, proximity)
 	trail_particles.speed_scale = lerpf(1.1, 1.7, proximity)
+	if _projectile_style == &"enemy":
+		trail_particles.modulate = Color(1.0, 0.26, 0.22, lerpf(0.92, 1.0, proximity))
 
 func _emit_ribbon(delta: float, proximity: float) -> void:
 	_ribbon_time_left -= delta
@@ -201,7 +267,7 @@ func _emit_ribbon(delta: float, proximity: float) -> void:
 
 	var ribbon_line := Line2D.new()
 	ribbon_line.width = lerpf(6.0, 10.0, proximity)
-	ribbon_line.default_color = Color(0.22, 1.0, 0.16, lerpf(0.28, 0.6, proximity))
+	ribbon_line.default_color = Color(1.0, 0.28, 0.22, lerpf(0.28, 0.6, proximity)) if _projectile_style == &"enemy" else Color(0.22, 1.0, 0.16, lerpf(0.28, 0.6, proximity))
 	ribbon_line.points = PackedVector2Array([
 		Vector2(-18, 0),
 		Vector2(-10, -4),
@@ -217,7 +283,7 @@ func _emit_ribbon(delta: float, proximity: float) -> void:
 
 	var ribbon_glow := Line2D.new()
 	ribbon_glow.width = ribbon_line.width * 1.8
-	ribbon_glow.default_color = Color(0.56, 1.0, 0.42, lerpf(0.12, 0.28, proximity))
+	ribbon_glow.default_color = Color(1.0, 0.48, 0.34, lerpf(0.12, 0.28, proximity)) if _projectile_style == &"enemy" else Color(0.56, 1.0, 0.42, lerpf(0.12, 0.28, proximity))
 	ribbon_glow.points = ribbon_line.points
 	ribbon_glow.begin_cap_mode = Line2D.LINE_CAP_ROUND
 	ribbon_glow.end_cap_mode = Line2D.LINE_CAP_ROUND

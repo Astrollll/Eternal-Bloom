@@ -5,7 +5,7 @@
 
 [node name="Main" type="Node2D" unique_id=1660168486]
 
-[node name="Enemy" parent="." instance=ExtResource("2_enemy")]
+[node name="Enemy" parent="." unique_id=1147621797 instance=ExtResource("2_enemy")]
 position = Vector2(840, 420)
 
 [node name="Player" parent="." unique_id=13225043 instance=ExtResource("1_player")]
