@@ -10,12 +10,14 @@ class_name SlashImpact
 var _impact_direction: Vector2 = Vector2.RIGHT
 
 func setup(direction: Vector2, impact_fade_time: float) -> void:
+	# Store the slash direction, rotate the effect, and kick off the animation.
 	_impact_direction = direction.normalized() if direction != Vector2.ZERO else Vector2.RIGHT
 	rotation = _impact_direction.angle()
 	fade_time = impact_fade_time
 	start()
 
 func start() -> void:
+	# Initialize the slash in a visible state before the timed smear and fade begin.
 	scale = Vector2.ONE
 	modulate = Color(1.0, 1.0, 1.0, 1.0)
 	skew = 0.0

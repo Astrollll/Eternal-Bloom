@@ -3,7 +3,7 @@ class_name Enemy
 
 @export var move_speed: float = 145.0
 @export var chase_range: float = 260.0
-@export var attack_range: float = 34.0
+@export var attack_range: float = 42.0
 @export var ranged_attack_range: float = 190.0
 @export var preferred_ranged_distance: float = 128.0
 @export var retreat_distance: float = 68.0
@@ -24,7 +24,7 @@ class_name Enemy
 
 const WALK_IDLE_TEX: Texture2D = preload("res://assets/Tiny Wonder Forest 1.0/characters/main character old/walk and idle.png")
 const ATTACK_TEX: Texture2D = preload("res://assets/Tiny Wonder Forest 1.0/characters/main character old/attack and die.png")
-const PlayerAttackModule = preload("res://scripts/modules/PlayerAttack.gd")
+const PlayerAttackModule: Script = preload("res://scripts/modules/PlayerAttack.gd")
 
 var player: CharacterBody2D
 var facing_right: bool = false
@@ -44,6 +44,7 @@ var strafe_dir: float = 1.0
 var strafe_timer: float = 0.0
 
 func _ready() -> void:
+	# Register the enemy, build its animation frames, and cache the player reference.
 	add_to_group("enemies")
 	_build_sprite_frames()
 	_setup_hp_bar()
@@ -56,13 +57,26 @@ func _ready() -> void:
 	sprite.play("idle_left")
 
 func _set_facing(right: bool) -> void:
+	# Respect knockback-facing locks so hit reactions do not immediately flip the sprite.
 	if facing_lock_time_left > 0.0:
 		return
 		
 	facing_right = right
 
+func _face_toward(direction: Vector2) -> void:
+	# Use a world-space direction to decide which side the enemy should present.
+	if direction.x != 0.0:
+		_set_facing(direction.x > 0.0)
+
+func _play_facing_anim(left_anim: StringName, right_anim: StringName) -> void:
+	# Pick the correct directional animation instead of flipping a single pose everywhere.
+	# Asset rows are mirrored vs. naming, so use the opposite named animation for true facing.
+	_play_anim(left_anim if facing_right else right_anim)
+	sprite.flip_h = false
+
 
 func _physics_process(delta: float) -> void:
+	# Run enemy AI, handle stun/knockback, and choose movement or attack based on distance.
 	if is_dead:
 		velocity = Vector2.ZERO
 		return
@@ -110,7 +124,7 @@ func _physics_process(delta: float) -> void:
 		far_boost = far_approach_speed
 		strafe_timer = 0.0
 
-	if dist <= attack_range + 6.0 and attack_cooldown_left <= 0.0:
+	if dist <= attack_range + 12.0 and attack_cooldown_left <= 0.0:
 		_start_attack(to_player)
 		velocity = knockback_velocity
 		move_and_slide()
@@ -155,7 +169,8 @@ func _physics_process(delta: float) -> void:
 		desired_velocity += n * move_speed * avoidance_strength
 
 	# Apply acceleration-based steering for smoother turns
-	velocity = velocity.move_toward(desired_velocity, accel * delta)
+	var steering_rate: float = turn_speed if turn_speed > 0.0 else accel
+	velocity = velocity.move_toward(desired_velocity, steering_rate * delta)
 	
 	# Extract the intended movement vector (ignoring knockback) to determine facing.
 	# This prevents the enemy from visually flipping backwards when hit.
@@ -164,7 +179,7 @@ func _physics_process(delta: float) -> void:
 	# Choose animation direction based on actual intent movement when available.
 	if visual_velocity.length() < 6.0:
 		if dir != Vector2.ZERO:
-			_set_facing(dir.x >= 0.0)
+			_face_toward(dir)
 		_play_idle()
 	else:
 		var anim_dir := visual_velocity.normalized()
@@ -173,14 +188,14 @@ func _physics_process(delta: float) -> void:
 	move_and_slide()
 
 func _start_attack(to_player: Vector2) -> void:
+	# Trigger the close-range attack sequence and apply damage if the player is in range.
 	is_attacking = true
 	attack_cooldown_left = attack_cooldown
 	if abs(to_player.x) >= abs(to_player.y):
-		_set_facing(to_player.x >= 0.0)
-	_play_anim("attack_right")
-	sprite.flip_h = locked_facing_right if facing_lock_time_left > 0.0 else facing_right
+		_face_toward(to_player)
+	_play_facing_anim("attack_left", "attack_right")
 
-	if to_player.length() <= attack_range + 8.0:
+	if to_player.length() <= attack_range + 12.0:
 		if player != null and is_instance_valid(player):
 			PlayerAttackModule.spawn_enemy_melee_slash(self , player, to_player, 0.18)
 			if player.has_method("on_hit_by_enemy"):
@@ -190,17 +205,18 @@ func _start_attack(to_player: Vector2) -> void:
 
 
 func _start_ranged_attack(to_player: Vector2) -> void:
+	# Fire a ranged projectile when the player sits inside the enemy's preferred combat band.
 	attack_cooldown_left = attack_cooldown + 0.1
 	if abs(to_player.x) >= abs(to_player.y):
-		_set_facing(to_player.x >= 0.0)
-	_play_anim("attack_right")
-	sprite.flip_h = locked_facing_right if facing_lock_time_left > 0.0 else facing_right
+		_face_toward(to_player)
+	_play_facing_anim("attack_left", "attack_right")
 
 	if player != null and is_instance_valid(player):
 		var shoot_dir := to_player.normalized() if to_player != Vector2.ZERO else (Vector2.RIGHT if facing_right else Vector2.LEFT)
 		PlayerAttackModule.shoot_enemy_projectile(self , shoot_dir, 1)
 
 func _on_animation_finished() -> void:
+	# Reset the attack state when the animation completes, and start fading after death.
 	if is_dead and String(sprite.animation).begins_with("die"):
 		_start_death_fade()
 		return
@@ -210,32 +226,36 @@ func _on_animation_finished() -> void:
 		_play_idle()
 
 func _update_walk_anim(dir: Vector2) -> void:
+	# Pick a walk animation that matches the dominant movement axis.
 	if dir == Vector2.ZERO:
 		_play_idle()
 		return
 
 	if abs(dir.x) >= abs(dir.y):
-		_set_facing(dir.x > 0.0)
-		_play_anim("walk_right")
-		sprite.flip_h = locked_facing_right if facing_lock_time_left > 0.0 else facing_right
+		_face_toward(dir)
+		_play_facing_anim("walk_left", "walk_right")
 	else:
 		if dir.y > 0.0:
 			_play_anim("walk_down")
 		else:
 			_play_anim("walk_up")
+		sprite.flip_h = false
 
 func _play_idle() -> void:
-	_play_anim("idle_right")
-	sprite.flip_h = locked_facing_right if facing_lock_time_left > 0.0 else facing_right
+	# Force the enemy into a stable idle animation while preserving the current facing.
+	_play_facing_anim("idle_left", "idle_right")
 
 func _play_anim(anim: StringName) -> void:
+	# Only play animations that exist on the sprite frames resource.
 	if sprite.sprite_frames != null and sprite.sprite_frames.has_animation(anim):
 		sprite.play(anim)
 
 func on_hit_by_player(amount: int, direction: Vector2 = Vector2.ZERO) -> void:
+	# Provide a unified callback so player attacks can damage enemies through one entry point.
 	take_damage(amount, direction)
 
 func take_damage(amount: int, direction: Vector2 = Vector2.ZERO) -> void:
+	# Reduce HP, apply knockback, flash the enemy, and transition to death when HP reaches zero.
 	if is_dead or amount <= 0:
 		return
 	current_hp = max(0, current_hp - amount)
@@ -246,8 +266,10 @@ func take_damage(amount: int, direction: Vector2 = Vector2.ZERO) -> void:
 		knockback_velocity = direction.normalized() * knockback_force
 		knockback_stun_left = knockback_stun_time
 		# Lock facing briefly to avoid transient flip from the instantaneous push
-		locked_facing_right = facing_right
+		locked_facing_right = direction.x < 0.0
 		facing_lock_time_left = knockback_stun_time + 0.06
+		facing_right = locked_facing_right
+		_play_facing_anim("idle_left", "idle_right")
 
 	# Ensure enemy never remains partially transparent from overlapping tweens.
 	modulate = Color(1.0, 1.0, 1.0, 1.0)
@@ -260,6 +282,7 @@ func take_damage(amount: int, direction: Vector2 = Vector2.ZERO) -> void:
 		_die()
 
 func _die() -> void:
+	# Stop movement and collision before the death animation finishes and fades away.
 	if is_dead:
 		return
 	is_dead = true
@@ -268,11 +291,11 @@ func _die() -> void:
 	collision_layer = 0
 	collision_mask = 0
 	modulate = Color(1.0, 1.0, 1.0, 1.0)
-	_play_anim("die_right")
-	sprite.flip_h = facing_right
+	_play_facing_anim("die_left", "die_right")
 	sprite.frame = 0
 
 func _start_death_fade() -> void:
+	# Fade the corpse out after the death animation ends to keep the scene uncluttered.
 	if death_fade_started:
 		return
 	death_fade_started = true
@@ -282,6 +305,7 @@ func _start_death_fade() -> void:
 	fade_tw.tween_callback(queue_free)
 
 func _setup_hp_bar() -> void:
+	# Attach a compact HP bar above the enemy for quick combat feedback.
 	hp_bar_bg = Line2D.new()
 	hp_bar_bg.width = 5.0
 	hp_bar_bg.default_color = Color(0.12, 0.12, 0.12, 0.82)
@@ -299,6 +323,7 @@ func _setup_hp_bar() -> void:
 	add_child(hp_bar_fill)
 
 func _update_hp_bar() -> void:
+	# Update the fill length to match the enemy's remaining health.
 	if hp_bar_fill == null:
 		return
 	var pct: float = clampf(float(current_hp) / float(max(1, max_hp)), 0.0, 1.0)
@@ -306,6 +331,7 @@ func _update_hp_bar() -> void:
 	hp_bar_fill.points = PackedVector2Array([Vector2(-half_w, 0), Vector2(-half_w + (half_w * 2.0 * pct), 0)])
 
 func _build_sprite_frames() -> void:
+	# Build a complete animation set from the atlas so the enemy can walk, attack, and die.
 	if sprite == null:
 		return
 	var frames: SpriteFrames = SpriteFrames.new()
@@ -322,6 +348,7 @@ func _build_sprite_frames() -> void:
 	sprite.sprite_frames = frames
 
 func _add_anim(frames: SpriteFrames, anim_name: StringName, atlas: Texture2D, cells: Array[Vector2i], speed: float, loop: bool) -> void:
+	# Slice each requested cell into an atlas frame and append it to the target animation.
 	frames.add_animation(anim_name)
 	frames.set_animation_speed(anim_name, speed)
 	frames.set_animation_loop(anim_name, loop)

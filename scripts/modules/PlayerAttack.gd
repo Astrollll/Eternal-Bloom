@@ -5,8 +5,15 @@ const SlashImpactScene: PackedScene = preload("res://scenes/SlashImpact.tscn")
 const ImpactBurstScene: PackedScene = preload("res://scenes/ImpactBurst.tscn")
 const CameraShakeScene: PackedScene = preload("res://scenes/CameraShake.tscn")
 const ProjectileScene: PackedScene = preload("res://scenes/Projectile.tscn")
+const HIT_SFX_PATH: String = "res://assets/sfx/hit.wav"
+const CAMERA_SHAKE_MIN_INTERVAL_MSEC: int = 45
+
+static var _cached_hit_sfx: AudioStream = null
+static var _did_try_load_hit_sfx: bool = false
+static var _last_camera_shake_msec: int = -1000
 
 static func apply_hit_stop(owner: Node, duration: float = 0.045, slow_scale: float = 0.045) -> void:
+	# Briefly slow the game when an attack connects, then restore time automatically.
 	if owner == null:
 		return
 	var tree: SceneTree = owner.get_tree()
@@ -30,18 +37,20 @@ static func apply_melee_hit(
 	attack_collision_mask: int,
 	impact_fade_time: float
 ) -> void:
+	# Sweep a hit box in front of the player, spawn impacts, and apply damage to everything caught in the arc.
 	if owner == null or owner.get_world_2d() == null:
 		return
 
 	var direction := facing_direction(facing_right)
 	var query_shape := RectangleShape2D.new()
-	# Increase size to cover from the player center to the range to avoid "dead zones"
-	query_shape.size = Vector2(attack_range, attack_half_size.y * 2.0)
+	# Extend the melee box slightly beyond the configured range so the swing feels less rigid.
+	var melee_length := attack_range + 8.0
+	query_shape.size = Vector2(melee_length, attack_half_size.y * 2.2)
 
 	var params := PhysicsShapeQueryParameters2D.new()
 	params.shape = query_shape
-	# Center the shape between the player and the max range
-	params.transform = Transform2D(0.0, owner.global_position + direction * (attack_range * 0.5))
+	# Center the shape between the player and the max range.
+	params.transform = Transform2D(0.0, owner.global_position + direction * (melee_length * 0.5))
 	params.collision_mask = attack_collision_mask
 	params.collide_with_bodies = true
 	params.collide_with_areas = true
@@ -71,6 +80,7 @@ static func apply_melee_hit(
 		flash_node_on_hit(collider, 0.08)
 
 static func spawn_enemy_melee_slash(owner: Node2D, target: Node2D, direction: Vector2, fade_time: float = 0.17) -> void:
+	# Create a smaller enemy melee slash anchored near the target for close-range enemy attacks.
 	if owner == null or target == null:
 		return
 	var root := owner.get_tree().current_scene
@@ -85,10 +95,16 @@ static func spawn_enemy_melee_slash(owner: Node2D, target: Node2D, direction: Ve
 	spawn_slash_impact(owner, root, hit_pos, dir, fade_time, target)
 
 static func facing_direction(facing_right: bool) -> Vector2:
+	# Convert a facing flag into a world-space horizontal direction.
 	return Vector2.RIGHT if facing_right else Vector2.LEFT
 
 static func camera_shake(root: Node, strength: float = 4.0, duration: float = 0.12) -> void:
 	# Try to find an active Camera2D in the current viewport and apply a small offset shake.
+	var now_msec: int = Time.get_ticks_msec()
+	if now_msec - _last_camera_shake_msec < CAMERA_SHAKE_MIN_INTERVAL_MSEC:
+		return
+	_last_camera_shake_msec = now_msec
+
 	var cam: Camera2D = null
 	if root != null and root.get_viewport() != null:
 		cam = root.get_viewport().get_camera_2d()
@@ -104,12 +120,15 @@ static func camera_shake(root: Node, strength: float = 4.0, duration: float = 0.
 	tw.tween_property(cam, "offset", orig, duration * 0.6)
 
 static func shoot_projectile(owner: Node2D, direction: Vector2, mask: int) -> void:
+	# Fire a player-style projectile that homes lightly toward the nearest enemy.
 	spawn_projectile(owner, direction, mask, false)
 
 static func shoot_enemy_projectile(owner: Node2D, direction: Vector2, mask: int) -> void:
+	# Fire an enemy-style projectile that uses the same projectile scene with a different behavior profile.
 	spawn_projectile(owner, direction, mask, true)
 
 static func spawn_projectile(owner: Node2D, direction: Vector2, mask: int, enemy_style: bool) -> void:
+	# Instantiate the projectile, aim it, configure its style, and wire its hit callback.
 	if owner == null or ProjectileScene == null:
 		return
 	
@@ -128,7 +147,9 @@ static func spawn_projectile(owner: Node2D, direction: Vector2, mask: int, enemy
 			final_dir = direction.normalized() if direction != Vector2.ZERO else Vector2.RIGHT
 		
 	owner.get_tree().current_scene.add_child(bullet)
-	bullet.global_position = owner.global_position + final_dir * 14.0
+	var spawn_origin := _projectile_spawn_origin(owner, enemy_style)
+	var muzzle_offset := _projectile_spawn_forward_offset(owner, final_dir)
+	bullet.global_position = spawn_origin + muzzle_offset
 	bullet.collision_mask = mask
 	bullet.velocity = final_dir * (920.0 if enemy_style else 700.0)
 	bullet.speed = 920.0 if enemy_style else 700.0
@@ -154,7 +175,47 @@ static func spawn_projectile(owner: Node2D, direction: Vector2, mask: int, enemy
 	# Optional: Small camera shake on shot for "kick"
 	camera_shake(owner.get_tree().current_scene, 2.0, 0.08)
 
+static func _projectile_spawn_origin(owner: Node2D, enemy_style: bool) -> Vector2:
+	# Spawn from the visual center, nudged downward so shots read closer to hand/sword height.
+	if owner == null:
+		return Vector2.ZERO
+	var sprite_node := owner.get_node_or_null("AnimatedSprite2D") as AnimatedSprite2D
+	if sprite_node != null:
+		var visual_scale: float = maxf(absf(sprite_node.global_scale.x), absf(sprite_node.global_scale.y))
+		var y_offset: float = (2.0 if enemy_style else 5.0) * maxf(visual_scale, 1.0)
+		return sprite_node.global_position + Vector2(0.0, y_offset)
+	return owner.global_position
+
+static func _projectile_spawn_forward_offset(owner: Node2D, direction: Vector2) -> Vector2:
+	# Push spawn point to the front of the shooter so the projectile and trail do not overlap the body.
+	if direction == Vector2.ZERO:
+		return Vector2.ZERO
+	var dir := direction.normalized()
+	var sprite_node := owner.get_node_or_null("AnimatedSprite2D") as AnimatedSprite2D
+	if sprite_node == null:
+		return dir * 12.0
+
+	var half_frame: float = 12.0
+	if sprite_node.sprite_frames != null and sprite_node.sprite_frames.has_animation(sprite_node.animation):
+		var tex := sprite_node.sprite_frames.get_frame_texture(sprite_node.animation, sprite_node.frame)
+		if tex != null:
+			half_frame = max(tex.get_width(), tex.get_height()) * 0.5
+
+	var visual_scale: float = maxf(absf(sprite_node.global_scale.x), absf(sprite_node.global_scale.y))
+	var front_distance: float = half_frame * maxf(visual_scale, 1.0) + 6.0
+	return dir * front_distance
+
+static func _get_hit_sfx() -> AudioStream:
+	# Resolve hit SFX once and reuse it to avoid per-impact resource checks/loads.
+	if _did_try_load_hit_sfx:
+		return _cached_hit_sfx
+	_did_try_load_hit_sfx = true
+	if ResourceLoader.exists(HIT_SFX_PATH):
+		_cached_hit_sfx = load(HIT_SFX_PATH) as AudioStream
+	return _cached_hit_sfx
+
 static func _find_nearest_enemy(owner: Node2D) -> Node2D:
+	# Search the enemy group and return the closest valid target to the owner.
 	if owner == null or owner.get_tree() == null:
 		return null
 	var nearest: Node2D = null
@@ -172,6 +233,7 @@ static func _find_nearest_enemy(owner: Node2D) -> Node2D:
 	return nearest
 
 static func _find_player_target(owner: Node2D) -> Node2D:
+	# Resolve the player node from the current scene so enemy shots can track the hero.
 	if owner == null or owner.get_tree() == null:
 		return null
 	var scene := owner.get_tree().current_scene
@@ -180,6 +242,7 @@ static func _find_player_target(owner: Node2D) -> Node2D:
 	return scene.get_node_or_null("Player") as Node2D
 
 static func _apply_damage_callback(collider: Object, direction: Vector2) -> void:
+	# Call whichever damage entry point the collider supports so combat stays decoupled.
 	if collider == null:
 		return
 	if collider.has_method("on_hit_by_player"):
@@ -212,6 +275,7 @@ static func spawn_slash_impact(
 	fade_time: float,
 	collider: Object = null
 ) -> void:
+	# Spawn the slash visual, optionally play a sound, and apply camera shake for the hit.
 	if owner == null or root == null:
 		return
 
@@ -232,10 +296,10 @@ static func spawn_slash_impact(
 		var main_slash := effect.get_node_or_null("MainSlash") as Line2D
 		var glow_slash := effect.get_node_or_null("GlowSlash") as Line2D
 		if main_slash != null:
-			main_slash.width = max(main_slash.width, 3.2)
+			main_slash.width = max(main_slash.width, 4.2)
 			main_slash.default_color = Color(1.0, 1.0, 1.0, 0.98)
 		if glow_slash != null:
-			glow_slash.width = max(glow_slash.width, 2.6)
+			glow_slash.width = max(glow_slash.width, 3.4)
 			glow_slash.default_color = Color(0.7, 0.9, 1.0, 0.58)
 	# Keep slash in front of slashed objects so it never appears hidden behind them.
 	effect.z_as_relative = false
@@ -245,10 +309,10 @@ static func spawn_slash_impact(
 		effect.call("setup", direction, fade_time)
 
 	# Play optional hit sound if available
-	var sfx_path := "res://assets/sfx/hit.wav"
-	if ResourceLoader.exists(sfx_path):
+	var hit_sfx := _get_hit_sfx()
+	if hit_sfx != null:
 		var ap := AudioStreamPlayer2D.new()
-		ap.stream = load(sfx_path)
+		ap.stream = hit_sfx
 		ap.global_position = effect.global_position
 		root.add_child(ap)
 		ap.play()
@@ -275,7 +339,7 @@ static func spawn_slash_impact(
 	else:
 		# fallback to code-built burst
 		if collider != null and collider.has_method("take_damage"):
-			spawn_impact_burst(root, effect.global_position, 12, Color(1.0, 0.75, 0.4, 1.0))
+			spawn_impact_burst(root, effect.global_position, 16, Color(1.0, 0.75, 0.4, 1.0))
 		else:
 			spawn_impact_burst(root, effect.global_position, 8, Color(0.6, 0.9, 1.0, 0.9))
 

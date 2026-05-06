@@ -21,13 +21,15 @@ var _glow_base_polygon: PackedVector2Array = PackedVector2Array()
 var _enemy_line_base_points: PackedVector2Array = PackedVector2Array()
 var _enemy_glow_base_points: PackedVector2Array = PackedVector2Array()
 var _life_time: float = 0.0
-var _trail_time_left: float = 0.0
 var _ribbon_time_left: float = 0.0
+@warning_ignore("unused_private_class_variable")
 var _approach_fx_played: bool = false
 var _trail_texture: Texture2D
 var _projectile_style: StringName = &"player"
 
 func _ready() -> void:
+	# Set up collision, visuals, particles, and the initial motion state.
+	# The projectile is also given a safety timer so it cannot live forever if it misses.
 	# connect signal to explicit Callable to avoid inference/connect issues
 	self.body_entered.connect(Callable(self , "_on_body_entered"))
 	_build_visuals()
@@ -43,30 +45,30 @@ func _ready() -> void:
 	t.timeout.connect(Callable(self , "queue_free"))
 
 func _physics_process(delta: float) -> void:
+	# Update lifetime and steer toward a target when homing is enabled.
 	_life_time += delta
 
 	if target != null and is_instance_valid(target):
+		# Move velocity toward the target direction instead of snapping instantly.
 		var desired := (target.global_position - global_position).normalized() * speed
 		if desired != Vector2.ZERO:
 			velocity = velocity.move_toward(desired, homing_strength * speed * delta)
 
+	# Drive visuals from the projectile's age and how close it is to its target.
 	var proximity := _target_proximity()
 	_animate_bullet_shape(_life_time, proximity)
-	_emit_trail(delta, proximity)
+	_emit_trail(proximity)
 	_emit_ribbon(delta, proximity)
 
-	if proximity > 0.22 and not _approach_fx_played:
-		_approach_fx_played = true
-		_play_approach_burst()
-	elif proximity <= 0.12:
-		_approach_fx_played = false
-
+	# Keep the projectile and its trail aligned to the current travel direction.
 	if velocity != Vector2.ZERO:
 		rotation = velocity.angle()
 
+	# Move the projectile after all steering and visual updates are applied.
 	global_position += velocity * delta
 
 func _start_visual_motion() -> void:
+	# Give each visible layer an additive material so it reads like a bright orb or slash.
 	_apply_style_visuals()
 	if bullet_visual != null:
 		var bullet_mat := CanvasItemMaterial.new()
@@ -99,6 +101,7 @@ func _start_visual_motion() -> void:
 		glow_visual.scale = Vector2.ONE
 
 func _build_visuals() -> void:
+	# Build the base meshes and line points once, then reuse them for animation.
 	_bullet_base_polygon = _make_circle_polygon(8, 7.0)
 	_glow_base_polygon = _make_circle_polygon(10, 11.5)
 	_enemy_line_base_points = PackedVector2Array([Vector2(-14, 0), Vector2(-8, 0), Vector2(8, 0), Vector2(14, 0)])
@@ -122,11 +125,13 @@ func _build_visuals() -> void:
 		enemy_bullet_glow.default_color = Color(1.0, 0.46, 0.34, 0.22)
 
 func set_projectile_style(style: StringName) -> void:
+	# Swap between player and enemy presentation without changing movement or damage.
 	_projectile_style = style
 	_apply_style_visuals()
 	_apply_trail_style()
 
 func _apply_style_visuals() -> void:
+	# Only one visual set should be visible at a time.
 	var enemy_style := _projectile_style == &"enemy"
 	if bullet_visual != null:
 		bullet_visual.visible = not enemy_style
@@ -138,11 +143,13 @@ func _apply_style_visuals() -> void:
 		enemy_bullet_glow.visible = enemy_style
 
 func _setup_trail_particles() -> void:
+	# Create a trail particle node on demand so the scene can omit it safely.
 	if trail_particles == null:
 		trail_particles = GPUParticles2D.new()
 		trail_particles.name = "TrailParticles"
 		add_child(trail_particles)
 
+	# Configure a short-lived streak that reacts to style and proximity.
 	trail_particles.emitting = true
 	trail_particles.amount = 64
 	trail_particles.lifetime = 0.34
@@ -170,6 +177,7 @@ func _setup_trail_particles() -> void:
 	_apply_trail_style()
 
 func _get_trail_texture() -> Texture2D:
+	# Cache a small radial texture so particle setup does not rebuild it every time.
 	if _trail_texture != null:
 		return _trail_texture
 	var img := Image.create(12, 12, false, Image.FORMAT_RGBA8)
@@ -183,6 +191,7 @@ func _get_trail_texture() -> Texture2D:
 	return _trail_texture
 
 func _apply_trail_style() -> void:
+	# Tint the trail differently for player and enemy shots.
 	var enemy_style := _projectile_style == &"enemy"
 	if trail_particles != null:
 		var mat := trail_particles.process_material as ParticleProcessMaterial
@@ -191,6 +200,7 @@ func _apply_trail_style() -> void:
 		trail_particles.modulate = Color(1.0, 0.24, 0.18, 1.0) if enemy_style else Color(0.52, 1.0, 0.34, 1.0)
 
 func _make_circle_polygon(points_count: int, radius: float) -> PackedVector2Array:
+	# Generate evenly spaced points around a circle for the bullet body and glow.
 	var poly := PackedVector2Array()
 	for i in range(points_count):
 		var angle := TAU * float(i) / float(points_count)
@@ -206,6 +216,7 @@ func _target_proximity() -> float:
 
 
 func _animate_bullet_shape(t: float, proximity: float) -> void:
+	# Use a rhythmic pulse and target proximity to make the projectile feel alive.
 	var pulse := sin(t * 20.0) * 0.04 + cos(t * 13.0) * 0.03
 	var approach_boost := 1.0 + proximity * 0.38
 	var scale_value := 1.0 + pulse
@@ -239,7 +250,8 @@ func _animate_bullet_shape(t: float, proximity: float) -> void:
 		trail_particles.speed_scale = lerpf(1.05, 1.6, proximity)
 		trail_particles.modulate = Color(1.0, 0.26, 0.22, lerpf(0.88, 1.0, proximity)) if enemy_style else Color(0.52, 1.0, 0.34, lerpf(0.82, 1.0, proximity))
 
-func _emit_trail(delta: float, proximity: float) -> void:
+func _emit_trail(proximity: float) -> void:
+	# Keep the particle trail active and stronger when the projectile is close to its target.
 	if trail_particles == null:
 		return
 	trail_particles.emitting = true
@@ -249,6 +261,7 @@ func _emit_trail(delta: float, proximity: float) -> void:
 		trail_particles.modulate = Color(1.0, 0.26, 0.22, lerpf(0.92, 1.0, proximity))
 
 func _emit_ribbon(delta: float, proximity: float) -> void:
+	# Spawn a short-lived line ribbon at a controlled interval so the projectile leaves a visible streak.
 	_ribbon_time_left -= delta
 	if _ribbon_time_left > 0.0:
 		return
@@ -299,6 +312,7 @@ func _emit_ribbon(delta: float, proximity: float) -> void:
 	tw.tween_callback(Callable(ribbon, "queue_free"))
 
 func _play_approach_burst() -> void:
+	# Add a small scale bump when the projectile enters its close-range visual phase.
 	var burst_tw := create_tween()
 	burst_tw.tween_property(self , "scale", Vector2(1.16, 1.16), 0.035)
 	burst_tw.tween_property(self , "scale", Vector2(1.0, 1.0), 0.075)
@@ -312,6 +326,7 @@ func _play_approach_burst() -> void:
 		glow_tw.tween_property(glow_visual, "modulate:a", 0.26, 0.08)
 
 func _on_body_entered(body: Node) -> void:
+	# Ignore the shooter, limit player projectiles to enemies, then hand the hit to the callback.
 	if body == source:
 		return
 

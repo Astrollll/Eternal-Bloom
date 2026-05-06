@@ -9,6 +9,7 @@ class_name ImpactBurst
 @export var duration: float = 0.22
 
 func _ready() -> void:
+	# Build a compact radial burst immediately so hits feel crisp and readable.
 	# Build radial short lines and animate them.
 	for i in range(count):
 		var line: Line2D = Line2D.new()

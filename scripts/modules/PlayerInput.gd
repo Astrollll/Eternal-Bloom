@@ -2,11 +2,13 @@ extends RefCounted
 class_name PlayerInput
 
 static func ensure_actions() -> void:
+	# Make sure all movement and combat input actions exist before gameplay starts.
 	ensure_move_actions()
 	ensure_attack_action()
 	ensure_dash_action()
 
 static func read_move_input() -> Vector2:
+	# Combine mapped actions and direct keys so keyboard movement works even before input maps are customized.
 	var x := 0.0
 	var y := 0.0
 
@@ -25,6 +27,7 @@ static func read_move_input() -> Vector2:
 	return Input.get_vector("move_left", "move_right", "move_up", "move_down")
 
 static func ensure_move_actions() -> void:
+	# Bind the standard WASD and arrow keys to the movement actions.
 	_bind_action_key("move_left", KEY_A)
 	_bind_action_key("move_left", KEY_LEFT)
 	_bind_action_key("move_right", KEY_D)
@@ -35,6 +38,7 @@ static func ensure_move_actions() -> void:
 	_bind_action_key("move_down", KEY_DOWN)
 
 static func ensure_attack_action() -> void:
+	# Bind left click to the attack action if it is not already present.
 	if not InputMap.has_action("attack"):
 		InputMap.add_action("attack")
 
@@ -47,6 +51,7 @@ static func ensure_attack_action() -> void:
 	InputMap.action_add_event("attack", event)
 
 static func ensure_dash_action() -> void:
+	# Bind right click to the dash action if it is not already present.
 	if not InputMap.has_action("dash"):
 		InputMap.add_action("dash")
 
@@ -59,6 +64,7 @@ static func ensure_dash_action() -> void:
 	InputMap.action_add_event("dash", event)
 
 static func _bind_action_key(action_name: String, keycode: Key) -> void:
+	# Attach a physical key to an action only once to avoid duplicate bindings.
 	if not InputMap.has_action(action_name):
 		InputMap.add_action(action_name)
 

@@ -4,6 +4,7 @@ class_name PlayerSkin
 const FRAME_SIZE := 24
 
 static func build_skin_frames(walk_idle_tex: Texture2D, attack_tex: Texture2D) -> SpriteFrames:
+	# Build a mirrored frame set for the optional character skin overlay.
 	var frames := SpriteFrames.new()
 	_add_skin_anim(frames, "idle_left", walk_idle_tex, [Vector2i(0, 0), Vector2i(1, 0)], 6.0, true)
 	_add_skin_anim(frames, "idle_right", walk_idle_tex, [Vector2i(2, 0), Vector2i(3, 0)], 6.0, true)
@@ -18,6 +19,7 @@ static func build_skin_frames(walk_idle_tex: Texture2D, attack_tex: Texture2D) -
 	return frames
 
 static func _add_skin_anim(frames: SpriteFrames, anim_name: StringName, atlas: Texture2D, cells: Array[Vector2i], speed: float, loop: bool) -> void:
+	# Slice the source atlas into evenly sized frames and add them to the sprite frames resource.
 	frames.add_animation(anim_name)
 	frames.set_animation_speed(anim_name, speed)
 	frames.set_animation_loop(anim_name, loop)

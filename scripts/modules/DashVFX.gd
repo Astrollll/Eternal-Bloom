@@ -2,6 +2,7 @@ extends RefCounted
 class_name DashVFX
 
 static func create_wind_line_texture() -> Texture2D:
+	# Build a small streak texture that can be reused for dash motion.
 	var image: Image = Image.create(28, 5, false, Image.FORMAT_RGBA8)
 	image.fill(Color(0.0, 0.0, 0.0, 0.0))
 	for x in range(28):
@@ -27,6 +28,7 @@ static func spawn_afterimage(
 	fade_time: float,
 	dash_direction: Vector2 = Vector2.ZERO
 ) -> void:
+	# Duplicate the current character visuals, then fade the copy out behind the dash.
 	if root == null:
 		return
 
@@ -67,6 +69,7 @@ static func update_wind_effect(
 	dash_direction: Vector2,
 	current_frame_tex: Texture2D
 ) -> void:
+	# Reorient the wind particles so they trail in the opposite direction of travel.
 	if wind_effect == null:
 		return
 

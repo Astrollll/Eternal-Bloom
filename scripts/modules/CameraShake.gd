@@ -4,6 +4,7 @@ class_name CameraShake
 @export var default_strength: float = 4.0
 
 func shake(strength: float = 4.0, duration: float = 0.12) -> void:
+	# Shake the active camera with a few short offset pulses for impact feedback.
 	var cam: Camera2D = get_viewport().get_camera_2d()
 	if cam == null:
 		return

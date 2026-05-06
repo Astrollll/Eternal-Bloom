@@ -8,9 +8,9 @@ extends CharacterBody2D
 @export var afterimage_interval: float = 0.05
 @export var afterimage_fade_time: float = 0.12
 @export var afterimage_alpha: float = 0.34
-@export var attack_range: float = 24.0
-@export var melee_trigger_bonus: float = 34.0
-@export var attack_half_size: Vector2 = Vector2(12, 10)
+@export var attack_range: float = 32.0
+@export var melee_trigger_bonus: float = 46.0
+@export var attack_half_size: Vector2 = Vector2(16, 14)
 @export var attack_collision_mask: int = 1
 @export var attack_impact_fade_time: float = 0.15
 @export var max_hp: int = 220
@@ -21,7 +21,7 @@ const DashVFXModule = preload("res://scripts/modules/DashVFX.gd")
 const PlayerInputModule = preload("res://scripts/modules/PlayerInput.gd")
 const PlayerCombatModule = preload("res://scripts/modules/PlayerCombat.gd")
 const PlayerSkinModule = preload("res://scripts/modules/PlayerSkin.gd")
-const PlayerAttackModule = preload("res://scripts/modules/PlayerAttack.gd")
+const PlayerAttackModule: Script = preload("res://scripts/modules/PlayerAttack.gd")
 const FRAME_SIZE: int = 24
 const BASE_ATTACK_TEX: Texture2D = preload("res://assets/Tiny Wonder Forest 1.0/characters/main character/attack and die.png")
 const SKIN_WALK_IDLE_TEX: Texture2D = preload("res://assets/Tiny Wonder Forest 1.0/characters/main character old/cat kigurumi walk and idle.png")
@@ -43,6 +43,7 @@ var is_dead: bool = false
 var death_fade_started: bool = false
 
 func _ready() -> void:
+	# Initialize input bindings, visual overlays, and the HP UI before gameplay begins.
 	get_tree().paused = false
 	PlayerInputModule.ensure_actions()
 	_ensure_death_animations()
@@ -54,6 +55,7 @@ func _ready() -> void:
 	sprite.animation_finished.connect(_on_sprite_animation_finished)
 
 func _physics_process(delta: float) -> void:
+	# Drive player movement, dash, attack, and animation state from frame-to-frame input.
 	if is_dead:
 		velocity = Vector2.ZERO
 		return
@@ -119,6 +121,7 @@ func _physics_process(delta: float) -> void:
 	_sync_skin_to_base()
 
 func _start_attack() -> void:
+	# Choose between melee and projectile attacks based on the nearest enemy's distance.
 	is_attacking = true
 	velocity = Vector2.ZERO
 	
@@ -140,6 +143,7 @@ func _start_attack() -> void:
 		PlayerAttackModule.shoot_projectile(self , shoot_dir, attack_collision_mask)
 
 func _on_sprite_animation_finished() -> void:
+	# Return to idle when attack or death animations finish their sequence.
 	if is_dead and (sprite.animation == &"die_left" or sprite.animation == &"die_right"):
 		_start_death_fade()
 		return
@@ -149,6 +153,7 @@ func _on_sprite_animation_finished() -> void:
 		_play_anim(PlayerCombatModule.idle_animation_for_facing(facing_right))
 
 func _get_nearest_enemy() -> Node2D:
+	# Scan the enemy group and pick the closest valid target for attack decisions.
 	var enemies = get_tree().get_nodes_in_group("enemies")
 	var nearest: Node2D = null
 	var min_dist := INF
@@ -161,6 +166,7 @@ func _get_nearest_enemy() -> Node2D:
 	return nearest
 
 func _setup_skin_overlay() -> void:
+	# Create or configure the optional skin overlay so it mirrors the base sprite exactly.
 	skin_sprite = get_node_or_null("SkinOverlay") as AnimatedSprite2D
 	if skin_sprite == null:
 		skin_sprite = AnimatedSprite2D.new()
@@ -177,9 +183,11 @@ func _setup_skin_overlay() -> void:
 	if skin_sprite.sprite_frames != null and skin_sprite.sprite_frames.has_animation(sprite.animation):
 		skin_sprite.play(sprite.animation)
 func _can_start_dash() -> bool:
+	# Dash is only allowed when the player is free to move and the cooldown has expired.
 	return not is_dashing and not is_attacking and dash_cooldown_left <= 0.0
 
 func _start_dash() -> void:
+	# Lock the dash direction, reset timers, and create the first afterimage immediately.
 	var input_dir: Vector2 = PlayerInputModule.read_move_input()
 	if input_dir == Vector2.ZERO:
 		dash_direction = Vector2.RIGHT if facing_right else Vector2.LEFT
@@ -196,16 +204,19 @@ func _start_dash() -> void:
 	_spawn_dash_afterimage(0.0)
 
 func _end_dash() -> void:
+	# Restore normal movement after the dash window closes.
 	is_dashing = false
 	velocity = Vector2.ZERO
 
 func _spawn_dash_afterimage(delta: float) -> void:
+	# Spawn one or more ghost copies whenever the afterimage timer elapses.
 	afterimage_time_left -= delta
 	while afterimage_time_left <= 0.0:
 		_create_afterimage_sprite()
 		afterimage_time_left += max(0.01, afterimage_interval)
 
 func _create_afterimage_sprite() -> void:
+	# Hand the current frame textures to the dash VFX helper so the ghost matches the player state.
 	var root: Node = get_tree().current_scene
 	if root == null:
 		return
@@ -232,11 +243,13 @@ func _create_afterimage_sprite() -> void:
 	)
 
 func _play_anim(anim_name: StringName) -> void:
+	# Keep the base sprite and optional skin overlay on the same animation frame.
 	sprite.play(anim_name)
 	if skin_sprite != null and skin_sprite.sprite_frames != null and skin_sprite.sprite_frames.has_animation(anim_name):
 		skin_sprite.play(anim_name)
 
 func _sync_skin_to_base() -> void:
+	# Mirror the base sprite's position, scale, and frame state so the overlay stays aligned.
 	if skin_sprite == null:
 		return
 	skin_sprite.position = sprite.position + skin_overlay_offset
@@ -247,6 +260,7 @@ func _sync_skin_to_base() -> void:
 	skin_sprite.frame_progress = sprite.frame_progress
 
 func _setup_hp_bar() -> void:
+	# Build a simple two-line HP bar above the player for immediate combat readability.
 	hp_bar_bg = Line2D.new()
 	hp_bar_bg.name = "HPBarBg"
 	hp_bar_bg.width = 5.0
@@ -266,6 +280,7 @@ func _setup_hp_bar() -> void:
 	add_child(hp_bar_fill)
 
 func _update_hp_bar() -> void:
+	# Resize and recolor the fill line so the bar reflects remaining health.
 	if hp_bar_fill == null:
 		return
 	var pct: float = clampf(float(current_hp) / float(max(1, max_hp)), 0.0, 1.0)
@@ -282,6 +297,7 @@ func _update_hp_bar() -> void:
 ## Updates the player's skin overlay textures at runtime.
 ## Pass null to both to effectively "unequip" the skin.
 func change_skin(walk_idle_tex: Texture2D, attack_tex: Texture2D) -> void:
+	# Swap the overlay sprite sheet while preserving the current animation state.
 	if skin_sprite == null:
 		_setup_skin_overlay()
 
@@ -298,6 +314,7 @@ func change_skin(walk_idle_tex: Texture2D, attack_tex: Texture2D) -> void:
 		skin_sprite.play(sprite.animation)
 
 func take_damage(amount: int, knock_dir: Vector2 = Vector2.ZERO) -> void:
+	# Apply damage, optionally add knockback, and flash the player to show a hit landed.
 	if is_dead or amount <= 0:
 		return
 	current_hp = max(0, current_hp - amount)
@@ -315,6 +332,7 @@ func take_damage(amount: int, knock_dir: Vector2 = Vector2.ZERO) -> void:
 		_die()
 
 func _die() -> void:
+	# Disable combat and collision, then play the death animation before fading out.
 	if is_dead:
 		return
 	is_dead = true
@@ -329,6 +347,7 @@ func _die() -> void:
 		skin_sprite.frame = 0
 
 func _start_death_fade() -> void:
+	# Fade the full player node out once the death animation has finished.
 	if death_fade_started:
 		return
 	death_fade_started = true
@@ -338,21 +357,25 @@ func _start_death_fade() -> void:
 	fade_tw.tween_callback(queue_free)
 
 func on_hit_by_enemy(amount: int, direction: Vector2 = Vector2.ZERO) -> void:
+	# Expose a uniform enemy-hit entry point so combat helpers can damage the player consistently.
 	take_damage(amount, direction)
 
 func _ensure_death_animations() -> void:
+	# Rebuild death animations from the atlas so the player and skin can share the same death flow.
 	if sprite == null or sprite.sprite_frames == null:
 		return
 	_replace_death_animation(sprite.sprite_frames, &"die_left", BASE_ATTACK_TEX, 1)
 	_replace_death_animation(sprite.sprite_frames, &"die_right", BASE_ATTACK_TEX, 3)
 
 func _ensure_skin_death_animations() -> void:
+	# Clone death animations onto the overlay sprite so the skin fades with the base character.
 	if skin_sprite == null or skin_sprite.sprite_frames == null:
 		return
 	_replace_death_animation(skin_sprite.sprite_frames, &"die_left", SKIN_ATTACK_TEX, 1)
 	_replace_death_animation(skin_sprite.sprite_frames, &"die_right", SKIN_ATTACK_TEX, 3)
 
 func _replace_death_animation(frames: SpriteFrames, anim_name: StringName, atlas: Texture2D, row: int) -> void:
+	# Slice a 24x24 row from the atlas into a replacement death animation.
 	if frames.has_animation(anim_name):
 		frames.remove_animation(anim_name)
 	frames.add_animation(anim_name)
