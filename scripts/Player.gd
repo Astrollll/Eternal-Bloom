@@ -13,6 +13,7 @@ extends CharacterBody2D
 @export var attack_half_size: Vector2 = Vector2(16, 14)
 @export var attack_collision_mask: int = 1
 @export var attack_impact_fade_time: float = 0.15
+@export var low_spec_vfx_mode: bool = false
 @export var max_hp: int = 220
 @export var hp_bar_offset: Vector2 = Vector2(0, -34)
 @onready var sprite: AnimatedSprite2D = $AnimatedSprite2D
@@ -46,6 +47,7 @@ func _ready() -> void:
 	# Initialize input bindings, visual overlays, and the HP UI before gameplay begins.
 	get_tree().paused = false
 	PlayerInputModule.ensure_actions()
+	PlayerAttackModule.set_low_spec_mode(low_spec_vfx_mode)
 	_ensure_death_animations()
 	_setup_skin_overlay()
 	_setup_hp_bar()
@@ -75,6 +77,11 @@ func _physics_process(delta: float) -> void:
 
 	if Input.is_action_just_pressed("dash") and _can_start_dash():
 		_start_dash()
+
+	if Input.is_action_just_pressed("toggle_low_spec_vfx"):
+		low_spec_vfx_mode = not low_spec_vfx_mode
+		PlayerAttackModule.set_low_spec_mode(low_spec_vfx_mode)
+		print("Low-spec VFX mode: ", "ON" if low_spec_vfx_mode else "OFF")
 
 	if is_dashing:
 		dash_time_left = max(0.0, dash_time_left - delta)

@@ -11,6 +11,11 @@ const CAMERA_SHAKE_MIN_INTERVAL_MSEC: int = 45
 static var _cached_hit_sfx: AudioStream = null
 static var _did_try_load_hit_sfx: bool = false
 static var _last_camera_shake_msec: int = -1000
+static var _low_spec_mode: bool = false
+
+static func set_low_spec_mode(enabled: bool) -> void:
+	# Shared toggle used by both player and enemy combat paths.
+	_low_spec_mode = enabled
 
 static func apply_hit_stop(owner: Node, duration: float = 0.045, slow_scale: float = 0.045) -> void:
 	# Briefly slow the game when an attack connects, then restore time automatically.
@@ -138,6 +143,8 @@ static func spawn_projectile(owner: Node2D, direction: Vector2, mask: int, enemy
 	var bullet = bullet_node as Area2D
 	if bullet == null:
 		return
+	if _low_spec_mode and bullet.has_method("set_low_spec_mode"):
+		bullet.call("set_low_spec_mode", true)
 
 	var target := _find_player_target(owner) if enemy_style else _find_nearest_enemy(owner)
 	var final_dir := direction.normalized() if direction != Vector2.ZERO else Vector2.RIGHT
@@ -173,7 +180,8 @@ static func spawn_projectile(owner: Node2D, direction: Vector2, mask: int, enemy
 		_apply_damage_callback(hit_target, final_dir)
 	
 	# Optional: Small camera shake on shot for "kick"
-	camera_shake(owner.get_tree().current_scene, 2.0, 0.08)
+	if not _low_spec_mode:
+		camera_shake(owner.get_tree().current_scene, 2.0, 0.08)
 
 static func _projectile_spawn_origin(owner: Node2D, enemy_style: bool) -> Vector2:
 	# Spawn from the visual center, nudged downward so shots read closer to hand/sword height.
@@ -321,6 +329,8 @@ static func spawn_slash_impact(
 	var shake_strength := 4.0
 	if collider != null and collider.has_method("take_damage"):
 		shake_strength = 8.0
+	if _low_spec_mode:
+		shake_strength *= 0.6
 	# Try to find or create a CameraShake manager under the scene root
 	var cam_node := root.get_node_or_null("CameraShake")
 	if cam_node == null and CameraShakeScene != null:
@@ -334,14 +344,17 @@ static func spawn_slash_impact(
 	if ImpactBurstScene != null:
 		var burst := ImpactBurstScene.instantiate() as Node2D
 		if burst != null:
+			if _low_spec_mode and burst.has_method("set"):
+				burst.set("count", 6)
+				burst.set("duration", 0.16)
 			burst.global_position = effect.global_position
 			root.add_child(burst)
 	else:
 		# fallback to code-built burst
 		if collider != null and collider.has_method("take_damage"):
-			spawn_impact_burst(root, effect.global_position, 16, Color(1.0, 0.75, 0.4, 1.0))
+			spawn_impact_burst(root, effect.global_position, 8 if _low_spec_mode else 16, Color(1.0, 0.75, 0.4, 1.0))
 		else:
-			spawn_impact_burst(root, effect.global_position, 8, Color(0.6, 0.9, 1.0, 0.9))
+			spawn_impact_burst(root, effect.global_position, 5 if _low_spec_mode else 8, Color(0.6, 0.9, 1.0, 0.9))
 
 static func spawn_impact_burst(root: Node, position: Vector2, count: int = 8, color: Color = Color(1, 1, 1, 1)) -> void:
 	if root == null:
@@ -362,11 +375,12 @@ static func spawn_impact_burst(root: Node, position: Vector2, count: int = 8, co
 
 	# Animate the burst: extend and fade
 	var tw := burst.create_tween()
+	tw.set_parallel(true)
 	for child in burst.get_children():
 		if child is Line2D:
 			var l := child as Line2D
 			var final_alpha := 0.0
 			tw.tween_property(l, "width", l.width * 0.2, 0.18)
 			tw.tween_property(l, "default_color:a", final_alpha, 0.22)
-
+	tw.chain().tween_interval(0.22)
 	tw.tween_callback(Callable(burst, "queue_free"))

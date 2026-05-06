@@ -6,6 +6,7 @@ static func ensure_actions() -> void:
 	ensure_move_actions()
 	ensure_attack_action()
 	ensure_dash_action()
+	ensure_toggle_low_spec_vfx_action()
 
 static func read_move_input() -> Vector2:
 	# Combine mapped actions and direct keys so keyboard movement works even before input maps are customized.
@@ -62,6 +63,10 @@ static func ensure_dash_action() -> void:
 	var event := InputEventMouseButton.new()
 	event.button_index = MOUSE_BUTTON_RIGHT as MouseButton
 	InputMap.action_add_event("dash", event)
+
+static func ensure_toggle_low_spec_vfx_action() -> void:
+	# Bind F3 to toggle low-spec VFX mode at runtime for quick performance testing.
+	_bind_action_key("toggle_low_spec_vfx", KEY_F3)
 
 static func _bind_action_key(action_name: String, keycode: Key) -> void:
 	# Attach a physical key to an action only once to avoid duplicate bindings.

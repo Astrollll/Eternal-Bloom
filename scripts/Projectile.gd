@@ -10,6 +10,8 @@ var target: Node2D = null
 @export var trail_interval: float = 0.04
 @export var trail_lifetime: float = 0.16
 @export var approach_radius: float = 86.0
+@export var ribbon_interval_scale: float = 1.0
+@export var low_spec_mode: bool = false
 @onready var bullet_visual: Polygon2D = get_node_or_null("BulletVisual") as Polygon2D
 @onready var glow_visual: Polygon2D = get_node_or_null("GlowVisual") as Polygon2D
 @onready var trail_particles: GPUParticles2D = get_node_or_null("TrailParticles") as GPUParticles2D
@@ -26,6 +28,8 @@ var _ribbon_time_left: float = 0.0
 var _approach_fx_played: bool = false
 var _trail_texture: Texture2D
 var _projectile_style: StringName = &"player"
+var _ribbon_points: PackedVector2Array = PackedVector2Array()
+var _ribbon_glow_material: CanvasItemMaterial
 
 func _ready() -> void:
 	# Set up collision, visuals, particles, and the initial motion state.
@@ -35,6 +39,8 @@ func _ready() -> void:
 	_build_visuals()
 	_setup_trail_particles()
 	_start_visual_motion()
+	_setup_ribbon_cache()
+	_apply_low_spec_tuning()
 	
 	# Ensure the projectile faces its travel direction
 	if velocity != Vector2.ZERO:
@@ -58,7 +64,8 @@ func _physics_process(delta: float) -> void:
 	var proximity := _target_proximity()
 	_animate_bullet_shape(_life_time, proximity)
 	_emit_trail(proximity)
-	_emit_ribbon(delta, proximity)
+	if not low_spec_mode:
+		_emit_ribbon(delta, proximity)
 
 	# Keep the projectile and its trail aligned to the current travel direction.
 	if velocity != Vector2.ZERO:
@@ -66,6 +73,30 @@ func _physics_process(delta: float) -> void:
 
 	# Move the projectile after all steering and visual updates are applied.
 	global_position += velocity * delta
+
+func _setup_ribbon_cache() -> void:
+	# Cache immutable ribbon geometry/material to avoid per-spawn allocations.
+	_ribbon_points = PackedVector2Array([
+		Vector2(-18, 0),
+		Vector2(-10, -4),
+		Vector2(-2, -2),
+		Vector2(6, 2),
+		Vector2(14, 4),
+		Vector2(20, 0)
+	])
+	_ribbon_glow_material = CanvasItemMaterial.new()
+	_ribbon_glow_material.blend_mode = CanvasItemMaterial.BLEND_MODE_ADD
+
+func set_low_spec_mode(enabled: bool) -> void:
+	low_spec_mode = enabled
+	_apply_low_spec_tuning()
+
+func _apply_low_spec_tuning() -> void:
+	# Reduce expensive projectile visuals when low-spec mode is enabled.
+	ribbon_interval_scale = 1.9 if low_spec_mode else 1.0
+	if trail_particles != null:
+		trail_particles.amount = 34 if low_spec_mode else 64
+		trail_particles.lifetime = 0.24 if low_spec_mode else 0.34
 
 func _start_visual_motion() -> void:
 	# Give each visible layer an additive material so it reads like a bright orb or slash.
@@ -265,7 +296,8 @@ func _emit_ribbon(delta: float, proximity: float) -> void:
 	_ribbon_time_left -= delta
 	if _ribbon_time_left > 0.0:
 		return
-	_ribbon_time_left = max(0.01, trail_interval * 0.55 - proximity * 0.008)
+	var scaled_interval: float = (trail_interval * 0.75 - proximity * 0.004) * maxf(0.5, ribbon_interval_scale)
+	_ribbon_time_left = maxf(0.022, scaled_interval)
 
 	var root := get_tree().current_scene
 	if root == null:
@@ -281,14 +313,7 @@ func _emit_ribbon(delta: float, proximity: float) -> void:
 	var ribbon_line := Line2D.new()
 	ribbon_line.width = lerpf(6.0, 10.0, proximity)
 	ribbon_line.default_color = Color(1.0, 0.28, 0.22, lerpf(0.28, 0.6, proximity)) if _projectile_style == &"enemy" else Color(0.22, 1.0, 0.16, lerpf(0.28, 0.6, proximity))
-	ribbon_line.points = PackedVector2Array([
-		Vector2(-18, 0),
-		Vector2(-10, -4),
-		Vector2(-2, -2),
-		Vector2(6, 2),
-		Vector2(14, 4),
-		Vector2(20, 0)
-	])
+	ribbon_line.points = _ribbon_points
 	ribbon_line.begin_cap_mode = Line2D.LINE_CAP_ROUND
 	ribbon_line.end_cap_mode = Line2D.LINE_CAP_ROUND
 	ribbon_line.joint_mode = Line2D.LINE_JOINT_ROUND
@@ -297,13 +322,11 @@ func _emit_ribbon(delta: float, proximity: float) -> void:
 	var ribbon_glow := Line2D.new()
 	ribbon_glow.width = ribbon_line.width * 1.8
 	ribbon_glow.default_color = Color(1.0, 0.48, 0.34, lerpf(0.12, 0.28, proximity)) if _projectile_style == &"enemy" else Color(0.56, 1.0, 0.42, lerpf(0.12, 0.28, proximity))
-	ribbon_glow.points = ribbon_line.points
+	ribbon_glow.points = _ribbon_points
 	ribbon_glow.begin_cap_mode = Line2D.LINE_CAP_ROUND
 	ribbon_glow.end_cap_mode = Line2D.LINE_CAP_ROUND
 	ribbon_glow.joint_mode = Line2D.LINE_JOINT_ROUND
-	var glow_mat := CanvasItemMaterial.new()
-	glow_mat.blend_mode = CanvasItemMaterial.BLEND_MODE_ADD
-	ribbon_glow.material = glow_mat
+	ribbon_glow.material = _ribbon_glow_material
 	ribbon.add_child(ribbon_glow)
 
 	var tw := ribbon.create_tween()
