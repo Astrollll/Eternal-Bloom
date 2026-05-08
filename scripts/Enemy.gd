@@ -13,6 +13,15 @@ class_name Enemy
 @export var accel: float = 1600.0
 @export var avoidance_distance: float = 22.0
 @export var avoidance_strength: float = 0.7
+@export var dash_speed: float = 820.0
+@export var dash_duration: float = 0.14
+@export var dash_cooldown: float = 0.55
+@export var dash_afterimage_interval: float = 0.05
+@export var dash_afterimage_fade_time: float = 0.12
+@export var dash_afterimage_alpha: float = 0.3
+@export var projectile_dodge_radius: float = 150.0
+@export var projectile_dodge_trigger_distance: float = 84.0
+@export var projectile_dodge_lookahead: float = 0.34
 @export var knockback_force: float = 400.0
 @export var knockback_stun_time: float = 0.12
 @export var attack_cooldown: float = 0.8
@@ -24,12 +33,20 @@ class_name Enemy
 
 const WALK_IDLE_TEX: Texture2D = preload("res://assets/Tiny Wonder Forest 1.0/characters/main character old/walk and idle.png")
 const ATTACK_TEX: Texture2D = preload("res://assets/Tiny Wonder Forest 1.0/characters/main character old/attack and die.png")
+const DashVFXModule = preload("res://scripts/modules/DashVFX.gd")
 const PlayerAttackModule: Script = preload("res://scripts/modules/PlayerAttack.gd")
 
 var player: CharacterBody2D
 var facing_right: bool = false
 var is_attacking: bool = false
 var attack_cooldown_left: float = 0.0
+var is_dashing: bool = false
+var dash_direction: Vector2 = Vector2.LEFT
+var dash_time_left: float = 0.0
+var dash_cooldown_left: float = 0.0
+var dash_speed_multiplier: float = 1.0
+var dash_duration_multiplier: float = 1.0
+var dash_afterimage_time_left: float = 0.0
 var current_hp: int = 0
 var is_dead: bool = false
 
@@ -83,18 +100,32 @@ func _physics_process(delta: float) -> void:
 
 	knockback_velocity = knockback_velocity.move_toward(Vector2.ZERO, 1000.0 * delta)
 	knockback_stun_left = max(0.0, knockback_stun_left - delta)
+	if dash_cooldown_left > 0.0:
+		dash_cooldown_left = max(0.0, dash_cooldown_left - delta)
 	# Facing lock timer: prevent transient flips while being knocked
 	facing_lock_time_left = max(0.0, facing_lock_time_left - delta)
 	if facing_lock_time_left > 0.0:
 		# enforce locked facing while active
 		facing_right = locked_facing_right
 	if knockback_stun_left > 0.0:
+		if is_dashing:
+			_end_dash()
 		velocity = knockback_velocity
 		# Interrupt any attack if stunned
 		if is_attacking:
 			is_attacking = false
 		_play_idle()
 		move_and_slide()
+		return
+
+	if is_dashing:
+		dash_time_left = max(0.0, dash_time_left - delta)
+		velocity = dash_direction * dash_speed * dash_speed_multiplier + knockback_velocity
+		move_and_slide()
+		_spawn_dash_afterimage(delta)
+		_update_walk_anim(dash_direction)
+		if dash_time_left <= 0.0:
+			_end_dash()
 		return
 
 	if attack_cooldown_left > 0.0:
@@ -119,6 +150,13 @@ func _physics_process(delta: float) -> void:
 	var dir: Vector2 = to_player.normalized() if dist > 0.001 else Vector2.ZERO
 	var lateral: Vector2 = Vector2(-dir.y, dir.x) * strafe_dir
 	var far_boost: float = 1.0
+
+	if _try_start_projectile_dodge():
+		velocity = dash_direction * dash_speed * dash_speed_multiplier + knockback_velocity
+		move_and_slide()
+		_spawn_dash_afterimage(0.0)
+		_update_walk_anim(dash_direction)
+		return
 
 	if dist > chase_range:
 		far_boost = far_approach_speed
@@ -280,6 +318,154 @@ func take_damage(amount: int, direction: Vector2 = Vector2.ZERO) -> void:
 
 	if current_hp <= 0:
 		_die()
+
+func _can_start_dash() -> bool:
+	# Allow a dodge dash only when the enemy is free to move and the dash is off cooldown.
+	return not is_dead and not is_dashing and knockback_stun_left <= 0.0 and dash_cooldown_left <= 0.0
+
+func _try_start_projectile_dodge() -> bool:
+	# Scan incoming player projectiles and convert a close threat into a short dash.
+	if not _can_start_dash() or player == null or not is_instance_valid(player):
+		return false
+
+	var threat := _find_projectile_threat()
+	if threat == null:
+		return false
+
+	var away_dir := _build_projectile_dodge_direction(threat)
+	if away_dir == Vector2.ZERO:
+		var fallback := global_position - player.global_position
+		away_dir = fallback.normalized() if fallback != Vector2.ZERO else (Vector2.RIGHT if facing_right else Vector2.LEFT)
+
+	var homing_threat: bool = threat.get("target") == self
+	_start_dash(away_dir, 1.25 if homing_threat else 1.0, 1.05 if homing_threat else 1.0)
+	return true
+
+func _build_projectile_dodge_direction(projectile: Node2D) -> Vector2:
+	# Prefer a perpendicular step across the shot path, then add a little outward drift.
+	if projectile == null:
+		return Vector2.ZERO
+
+	var projectile_velocity_variant: Variant = projectile.get("velocity")
+	var projectile_velocity: Vector2 = projectile_velocity_variant if projectile_velocity_variant is Vector2 else Vector2.ZERO
+	var offset := global_position - projectile.global_position
+
+	if projectile_velocity == Vector2.ZERO:
+		return offset.normalized() if offset != Vector2.ZERO else Vector2.ZERO
+
+	var travel_dir := projectile_velocity.normalized()
+	var side_dir := Vector2(-travel_dir.y, travel_dir.x)
+	var side_sign := 1.0 if travel_dir.cross(offset) >= 0.0 else -1.0
+	var dodge_dir := (side_dir * side_sign * 0.55) + (offset.normalized() * 0.12)
+	if dodge_dir == Vector2.ZERO:
+		return Vector2.ZERO
+	return dodge_dir.normalized()
+
+func _find_projectile_threat() -> Node2D:
+	# Pick the closest player-fired projectile that is likely to pass through the enemy soon.
+	var best_projectile: Node2D = null
+	var best_score: float = INF
+	for projectile in get_tree().get_nodes_in_group("projectiles"):
+		if not is_instance_valid(projectile):
+			continue
+		if not (projectile is Node2D):
+			continue
+		if not _is_player_projectile(projectile):
+			continue
+
+		var projectile_node := projectile as Node2D
+		var offset := global_position - projectile_node.global_position
+		var distance := offset.length()
+		if distance > projectile_dodge_radius:
+			continue
+		if distance > projectile_dodge_trigger_distance:
+			continue
+
+		var projectile_velocity_variant: Variant = projectile.get("velocity")
+		var projectile_velocity: Vector2 = projectile_velocity_variant if projectile_velocity_variant is Vector2 else Vector2.ZERO
+		if projectile_velocity != Vector2.ZERO:
+			var travel_dir := projectile_velocity.normalized()
+			var approach := offset.dot(travel_dir)
+			if approach < -6.0:
+				continue
+			var perp := absf(offset.cross(travel_dir))
+			if perp > projectile_dodge_radius * 0.8:
+				continue
+			var time_to_pass := maxf(0.0, approach) / maxf(1.0, projectile_velocity.length())
+			if time_to_pass > projectile_dodge_lookahead and distance > projectile_dodge_radius * 0.55:
+				continue
+
+		var score := distance
+		if projectile.get("target") == self:
+			score -= 60.0
+		if score < best_score:
+			best_score = score
+			best_projectile = projectile_node
+
+	return best_projectile
+
+func _is_player_projectile(projectile: Object) -> bool:
+	# Only dodge shots that belong to the player side.
+	var shot_source: Variant = projectile.get("source")
+	if shot_source == null:
+		return false
+	if shot_source == player:
+		return true
+	if shot_source is Node and (shot_source as Node).name == "Player":
+		return true
+	return shot_source is Node and (shot_source as Node).is_in_group("player")
+
+func _start_dash(direction: Vector2, duration_scale: float = 1.0, speed_scale: float = 1.0) -> void:
+	# Lock a dodge direction, interrupt attacks, and kick off the dash VFX cycle.
+	if direction == Vector2.ZERO:
+		return
+	is_dashing = true
+	is_attacking = false
+	dash_direction = direction.normalized()
+	dash_duration_multiplier = maxf(0.25, duration_scale)
+	dash_speed_multiplier = maxf(0.25, speed_scale)
+	dash_time_left = dash_duration * dash_duration_multiplier
+	dash_cooldown_left = dash_cooldown
+	dash_afterimage_time_left = 0.0
+	if absf(dash_direction.x) >= absf(dash_direction.y):
+		_face_toward(dash_direction)
+	_spawn_dash_afterimage(0.0)
+
+func _end_dash() -> void:
+	# Return to the regular movement state once the dodge window closes.
+	is_dashing = false
+	dash_speed_multiplier = 1.0
+	dash_duration_multiplier = 1.0
+	velocity = Vector2.ZERO
+
+func _spawn_dash_afterimage(delta: float) -> void:
+	# Emit repeated ghost copies behind the dash so the enemy reads like the player does.
+	dash_afterimage_time_left -= delta
+	while dash_afterimage_time_left <= 0.0:
+		_create_dash_afterimage()
+		dash_afterimage_time_left += max(0.01, dash_afterimage_interval)
+
+func _create_dash_afterimage() -> void:
+	# Reuse the shared dash VFX helper with the enemy's current animation frame.
+	var root: Node = get_tree().current_scene
+	if root == null or sprite.sprite_frames == null or not sprite.sprite_frames.has_animation(sprite.animation):
+		return
+
+	var base_tex := sprite.sprite_frames.get_frame_texture(sprite.animation, sprite.frame)
+	DashVFXModule.spawn_afterimage(
+		self ,
+		root,
+		global_position,
+		sprite.z_index - 1,
+		base_tex,
+		sprite.scale,
+		null,
+		Vector2.ONE,
+		Vector2.ZERO,
+		dash_afterimage_alpha,
+		dash_afterimage_fade_time,
+		dash_direction
+	)
 
 func _die() -> void:
 	# Stop movement and collision before the death animation finishes and fades away.

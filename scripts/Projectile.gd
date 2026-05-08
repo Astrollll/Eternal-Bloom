@@ -34,6 +34,7 @@ var _ribbon_glow_material: CanvasItemMaterial
 func _ready() -> void:
 	# Set up collision, visuals, particles, and the initial motion state.
 	# The projectile is also given a safety timer so it cannot live forever if it misses.
+	add_to_group("projectiles")
 	# connect signal to explicit Callable to avoid inference/connect issues
 	self.body_entered.connect(Callable(self , "_on_body_entered"))
 	_build_visuals()

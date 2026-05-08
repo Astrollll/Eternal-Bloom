@@ -9,8 +9,8 @@ extends CharacterBody2D
 @export var afterimage_fade_time: float = 0.12
 @export var afterimage_alpha: float = 0.34
 @export var attack_range: float = 32.0
-@export var melee_trigger_bonus: float = 46.0
-@export var attack_half_size: Vector2 = Vector2(16, 14)
+@export var melee_trigger_bonus: float = 90.0
+@export var attack_half_size: Vector2 = Vector2(32, 26)
 @export var attack_collision_mask: int = 1
 @export var attack_impact_fade_time: float = 0.15
 @export var low_spec_vfx_mode: bool = false
@@ -139,15 +139,20 @@ func _start_attack() -> void:
 	# If target is within melee range (with a small buffer), swing sword
 	if target != null and dist <= melee_trigger_range:
 		_play_anim(PlayerCombatModule.attack_animation_for_facing(facing_right))
-		PlayerAttackModule.apply_melee_hit(
-			self , facing_right, attack_range, attack_half_size,
-			attack_collision_mask, attack_impact_fade_time
-		)
+		# Delay melee hit to sync with sword swing animation (minimal delay for instant feedback)
+		var timer = get_tree().create_timer(0.02)
+		timer.timeout.connect(func() -> void:
+			if is_instance_valid(self ):
+				PlayerAttackModule.apply_melee_hit(
+					self , facing_right, attack_range, attack_half_size,
+					attack_collision_mask, attack_impact_fade_time
+				)
+		, CONNECT_ONE_SHOT)
 	else:
 		# Otherwise, shoot a projectile in the direction of the target or facing direction
-		_play_anim(PlayerCombatModule.attack_animation_for_facing(facing_right))
 		var shoot_dir = (target.global_position - global_position).normalized() if target else (Vector2.RIGHT if facing_right else Vector2.LEFT)
 		PlayerAttackModule.shoot_projectile(self , shoot_dir, attack_collision_mask)
+		is_attacking = false
 
 func _on_sprite_animation_finished() -> void:
 	# Return to idle when attack or death animations finish their sequence.
@@ -352,6 +357,15 @@ func _die() -> void:
 	sprite.frame = 0
 	if skin_sprite != null and skin_sprite.visible:
 		skin_sprite.frame = 0
+	# Detach the camera so it stays at the death location after the player fades out.
+	var camera := get_node_or_null("Camera2D") as Camera2D
+	if camera != null:
+		var current_scene := get_tree().current_scene
+		if current_scene != null and camera.get_parent() != current_scene:
+			var camera_transform := camera.global_transform
+			camera.reparent(current_scene)
+			camera.global_transform = camera_transform
+		camera.make_current()
 
 func _start_death_fade() -> void:
 	# Fade the full player node out once the death animation has finished.

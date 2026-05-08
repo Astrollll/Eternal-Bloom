@@ -124,13 +124,35 @@ static func camera_shake(root: Node, strength: float = 4.0, duration: float = 0.
 	tw.tween_property(cam, "offset", orig + Vector2(rx * strength, ry * strength), duration * 0.4)
 	tw.tween_property(cam, "offset", orig, duration * 0.6)
 
+const PLAYER_BURST_SHOTS: int = 3
+const PLAYER_BURST_INTERVAL: float = 0.06
+
 static func shoot_projectile(owner: Node2D, direction: Vector2, mask: int) -> void:
-	# Fire a player-style projectile that homes lightly toward the nearest enemy.
-	spawn_projectile(owner, direction, mask, false)
+	# Fire a rapid burst of player shots toward the nearest enemy.
+	_spawn_projectile_burst(owner, direction, mask, false, PLAYER_BURST_SHOTS, PLAYER_BURST_INTERVAL)
 
 static func shoot_enemy_projectile(owner: Node2D, direction: Vector2, mask: int) -> void:
 	# Fire an enemy-style projectile that uses the same projectile scene with a different behavior profile.
 	spawn_projectile(owner, direction, mask, true)
+
+static func _spawn_projectile_burst(owner: Node2D, direction: Vector2, mask: int, enemy_style: bool, shots: int, interval: float) -> void:
+	# Spawn one projectile immediately, then queue the remaining shots with a short delay.
+	if owner == null or shots <= 0:
+		return
+
+	spawn_projectile(owner, direction, mask, enemy_style)
+	if shots == 1 or owner.get_tree() == null:
+		return
+
+	var tree := owner.get_tree()
+	for shot_index in range(1, shots):
+		var delay := interval * float(shot_index)
+		var timer := tree.create_timer(delay)
+		timer.timeout.connect(func() -> void:
+			if owner == null or not is_instance_valid(owner):
+				return
+			spawn_projectile(owner, direction, mask, enemy_style)
+		, CONNECT_ONE_SHOT)
 
 static func spawn_projectile(owner: Node2D, direction: Vector2, mask: int, enemy_style: bool) -> void:
 	# Instantiate the projectile, aim it, configure its style, and wire its hit callback.
@@ -160,7 +182,7 @@ static func spawn_projectile(owner: Node2D, direction: Vector2, mask: int, enemy
 	bullet.collision_mask = mask
 	bullet.velocity = final_dir * (920.0 if enemy_style else 700.0)
 	bullet.speed = 920.0 if enemy_style else 700.0
-	bullet.homing_strength = 0.0 if enemy_style else 10.0
+	bullet.homing_strength = 0.0
 	bullet.source = owner
 	bullet.target = target if not enemy_style else null
 	if bullet.has_method("set_projectile_style"):
