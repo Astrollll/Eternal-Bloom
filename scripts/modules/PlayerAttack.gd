@@ -105,6 +105,9 @@ static func facing_direction(facing_right: bool) -> Vector2:
 
 static func camera_shake(root: Node, strength: float = 4.0, duration: float = 0.12) -> void:
 	# Try to find an active Camera2D in the current viewport and apply a small offset shake.
+	# Skip camera shake entirely in low-spec mode
+	if _low_spec_mode:
+		return
 	var now_msec: int = Time.get_ticks_msec()
 	if now_msec - _last_camera_shake_msec < CAMERA_SHAKE_MIN_INTERVAL_MSEC:
 		return
@@ -141,6 +144,8 @@ static func _spawn_projectile_burst(owner: Node2D, direction: Vector2, mask: int
 		return
 
 	spawn_projectile(owner, direction, mask, enemy_style)
+	if owner.has_method("on_weapon_round_fired"):
+		owner.call("on_weapon_round_fired", 0, shots, direction)
 	if shots == 1 or owner.get_tree() == null:
 		return
 
@@ -152,6 +157,8 @@ static func _spawn_projectile_burst(owner: Node2D, direction: Vector2, mask: int
 			if owner == null or not is_instance_valid(owner):
 				return
 			spawn_projectile(owner, direction, mask, enemy_style)
+			if owner.has_method("on_weapon_round_fired"):
+				owner.call("on_weapon_round_fired", shot_index, shots, direction)
 		, CONNECT_ONE_SHOT)
 
 static func spawn_projectile(owner: Node2D, direction: Vector2, mask: int, enemy_style: bool) -> void:
@@ -206,9 +213,16 @@ static func spawn_projectile(owner: Node2D, direction: Vector2, mask: int, enemy
 		camera_shake(owner.get_tree().current_scene, 2.0, 0.08)
 
 static func _projectile_spawn_origin(owner: Node2D, enemy_style: bool) -> Vector2:
-	# Spawn from the visual center, nudged downward so shots read closer to hand/sword height.
+	# Spawn from the weapon sprite position if the owner has one (player with held gun).
 	if owner == null:
 		return Vector2.ZERO
+	
+	# Check if owner has a weapon sprite (gun held by player)
+	var weapon_sprite := owner.get_node_or_null("GunSprite") as Sprite2D
+	if weapon_sprite != null and weapon_sprite.visible:
+		return weapon_sprite.global_position
+	
+	# Fallback: Spawn from the character's visual center, nudged downward so shots read closer to hand/sword height.
 	var sprite_node := owner.get_node_or_null("AnimatedSprite2D") as AnimatedSprite2D
 	if sprite_node != null:
 		var visual_scale: float = maxf(absf(sprite_node.global_scale.x), absf(sprite_node.global_scale.y))
@@ -283,7 +297,8 @@ static func _apply_damage_callback(collider: Object, direction: Vector2) -> void
 
 static func flash_node_on_hit(collider: Object, duration: float = 0.08, flash_color: Color = Color(1, 1, 1, 1)) -> void:
 	# Briefly tint CanvasItem-derived nodes to provide immediate hit feedback.
-	if collider == null:
+	# Skip hit flashes in low-spec mode to save tweens
+	if _low_spec_mode or collider == null:
 		return
 	if collider is CanvasItem:
 		var ci := collider as CanvasItem

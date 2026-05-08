@@ -17,6 +17,7 @@ extends CharacterBody2D
 @export var max_hp: int = 220
 @export var hp_bar_offset: Vector2 = Vector2(0, -34)
 @onready var sprite: AnimatedSprite2D = $AnimatedSprite2D
+@onready var weapon_sprite: Sprite2D = $GunSprite
 
 const DashVFXModule = preload("res://scripts/modules/DashVFX.gd")
 const PlayerInputModule = preload("res://scripts/modules/PlayerInput.gd")
@@ -27,6 +28,7 @@ const FRAME_SIZE: int = 24
 const BASE_ATTACK_TEX: Texture2D = preload("res://assets/Tiny Wonder Forest 1.0/characters/main character/attack and die.png")
 const SKIN_WALK_IDLE_TEX: Texture2D = preload("res://assets/Tiny Wonder Forest 1.0/characters/main character old/cat kigurumi walk and idle.png")
 const SKIN_ATTACK_TEX: Texture2D = preload("res://assets/Tiny Wonder Forest 1.0/characters/main character/cat kigurumi attack and die.png")
+const GUN_TEX: Texture2D = preload("res://assets/weapons/Sprite_Gas_Blaster.webp")
 
 var facing_right: bool = true
 var is_attacking: bool = false
@@ -40,6 +42,11 @@ var current_hp: int = 0
 var hp_bar_bg: Line2D
 var hp_bar_fill: Line2D
 var knockback_velocity: Vector2 = Vector2.ZERO
+var weapon_recoil_amount: float = 0.0
+var weapon_squash_amount: float = 0.0
+var _weapon_aim_direction: Vector2 = Vector2.RIGHT
+var weapon_fire_tween: Tween = null
+var weapon_squash_tween: Tween = null
 var is_dead: bool = false
 var death_fade_started: bool = false
 
@@ -50,6 +57,7 @@ func _ready() -> void:
 	PlayerAttackModule.set_low_spec_mode(low_spec_vfx_mode)
 	_ensure_death_animations()
 	_setup_skin_overlay()
+	_setup_weapon_overlay()
 	_setup_hp_bar()
 	current_hp = max_hp
 	_update_hp_bar()
@@ -64,6 +72,8 @@ func _physics_process(delta: float) -> void:
 
 	# Gradually decay knockback over time
 	knockback_velocity = knockback_velocity.move_toward(Vector2.ZERO, 1000.0 * delta)
+	weapon_recoil_amount = move_toward(weapon_recoil_amount, 0.0, 18.0 * delta)
+	weapon_squash_amount = move_toward(weapon_squash_amount, 0.0, 5.0 * delta)
 
 	if dash_cooldown_left > 0.0:
 		dash_cooldown_left = max(0.0, dash_cooldown_left - delta)
@@ -87,7 +97,9 @@ func _physics_process(delta: float) -> void:
 		dash_time_left = max(0.0, dash_time_left - delta)
 		velocity = dash_direction * dash_speed + knockback_velocity
 		move_and_slide()
-		_spawn_dash_afterimage(delta)
+		# Skip afterimages in low-spec mode to save particles/memory
+		if not low_spec_vfx_mode:
+			_spawn_dash_afterimage(delta)
 		_sync_skin_to_base()
 		if dash_time_left <= 0.0:
 			_end_dash()
@@ -154,6 +166,42 @@ func _start_attack() -> void:
 		PlayerAttackModule.shoot_projectile(self , shoot_dir, attack_collision_mask)
 		is_attacking = false
 
+func on_weapon_round_fired(round_index: int, total_rounds: int, _direction: Vector2 = Vector2.ZERO) -> void:
+	# Keep the held gun pointed at the current shot direction, then kick it back slightly.
+	# Also apply a green glow effect and squash/stretch to make firing more visually apparent.
+	if weapon_sprite == null:
+		return
+
+	var aim_direction: Vector2 = _direction.normalized() if _direction != Vector2.ZERO else (Vector2.RIGHT if facing_right else Vector2.LEFT)
+	_weapon_aim_direction = aim_direction
+	weapon_recoil_amount = 2.2 + float(round_index) * 0.35 + float(max(0, total_rounds - 1)) * 0.12
+	_sync_weapon_to_base()
+	
+	# Skip expensive glow tweens in low-spec mode
+	if low_spec_vfx_mode:
+		return
+	
+	# Flash the gun green to match the projectile color and show firing feedback
+	# Kill any existing tween so burst fire creates a crisp repeated glow effect
+	if weapon_fire_tween != null and weapon_fire_tween.is_valid():
+		weapon_fire_tween.kill()
+	
+	weapon_sprite.modulate = Color(0.52, 1.0, 0.34, 1.0) # Bright green matching projectiles
+	weapon_fire_tween = create_tween()
+	weapon_fire_tween.tween_property(weapon_sprite, "modulate", Color(1.0, 1.0, 1.0, 1.0), 0.12)
+	
+	# Add squash and stretch effect to the gun for juicy firing feedback
+	if weapon_squash_tween != null and weapon_squash_tween.is_valid():
+		weapon_squash_tween.kill()
+	
+	weapon_squash_tween = create_tween()
+	weapon_squash_tween.set_ease(Tween.EASE_OUT)
+	weapon_squash_tween.set_trans(Tween.TRANS_ELASTIC)
+	# Squash vertically and stretch horizontally on fire
+	weapon_squash_tween.tween_property(self , "weapon_squash_amount", 1.0, 0.08)
+	# Bounce back to normal with elastic overshoot
+	weapon_squash_tween.tween_property(self , "weapon_squash_amount", 0.0, 0.14)
+
 func _on_sprite_animation_finished() -> void:
 	# Return to idle when attack or death animations finish their sequence.
 	if is_dead and (sprite.animation == &"die_left" or sprite.animation == &"die_right"):
@@ -179,6 +227,9 @@ func _get_nearest_enemy() -> Node2D:
 
 func _setup_skin_overlay() -> void:
 	# Create or configure the optional skin overlay so it mirrors the base sprite exactly.
+	# Skip skin setup in low-spec mode to save memory and rendering cost
+	if low_spec_vfx_mode:
+		return
 	skin_sprite = get_node_or_null("SkinOverlay") as AnimatedSprite2D
 	if skin_sprite == null:
 		skin_sprite = AnimatedSprite2D.new()
@@ -194,6 +245,51 @@ func _setup_skin_overlay() -> void:
 	skin_sprite.z_index = sprite.z_index + 1
 	if skin_sprite.sprite_frames != null and skin_sprite.sprite_frames.has_animation(sprite.animation):
 		skin_sprite.play(sprite.animation)
+
+func _setup_weapon_overlay() -> void:
+	# Attach a dedicated gun sprite so the player visibly carries the weapon in-hand.
+	weapon_sprite = get_node_or_null("GunSprite") as Sprite2D
+	if weapon_sprite == null:
+		weapon_sprite = Sprite2D.new()
+		weapon_sprite.name = "GunSprite"
+		add_child(weapon_sprite)
+
+	if weapon_sprite.texture == null:
+		weapon_sprite.texture = GUN_TEX
+	weapon_sprite.centered = true
+	weapon_sprite.scale = Vector2(0.24, 0.24)
+	weapon_sprite.z_index = sprite.z_index + 2
+	_sync_weapon_to_base()
+
+func _get_weapon_aim_direction() -> Vector2:
+	# Aim at the closest enemy when one exists; otherwise fall back to the current facing.
+	var target := _get_nearest_enemy()
+	if target != null:
+		var aim := (target.global_position - global_position).normalized()
+		if aim != Vector2.ZERO:
+			return aim
+	return Vector2.RIGHT if facing_right else Vector2.LEFT
+
+func _sync_weapon_to_base() -> void:
+	# Keep the gun anchored in front of the player and rotate it toward the current target.
+	if weapon_sprite == null:
+		return
+	_weapon_aim_direction = _get_weapon_aim_direction()
+	var aim := _weapon_aim_direction.normalized()
+	var hold_forward: float = 26.0
+	var hold_height: float = 6.0
+	var recoil_back: float = minf(3.0, weapon_recoil_amount)
+	
+	# Apply squash and stretch effect: subtle horizontal squash on the sides
+	var base_scale: float = 0.24
+	var squash_scale_x: float = base_scale - weapon_squash_amount * 0.05 # Subtle horizontal squash
+	var squash_scale_y: float = base_scale + weapon_squash_amount * 0.01 # Minimal vertical stretch
+	weapon_sprite.scale = Vector2(squash_scale_x, squash_scale_y)
+	
+	weapon_sprite.flip_v = aim.x < 0.0
+	weapon_sprite.rotation = aim.angle()
+	weapon_sprite.position = (aim * (hold_forward - recoil_back)) + Vector2(0.0, hold_height)
+
 func _can_start_dash() -> bool:
 	# Dash is only allowed when the player is free to move and the cooldown has expired.
 	return not is_dashing and not is_attacking and dash_cooldown_left <= 0.0
@@ -222,10 +318,12 @@ func _end_dash() -> void:
 
 func _spawn_dash_afterimage(delta: float) -> void:
 	# Spawn one or more ghost copies whenever the afterimage timer elapses.
+	# In low-spec mode, reduce frequency to save memory
+	var effective_interval := afterimage_interval * (2.5 if low_spec_vfx_mode else 1.0)
 	afterimage_time_left -= delta
 	while afterimage_time_left <= 0.0:
 		_create_afterimage_sprite()
-		afterimage_time_left += max(0.01, afterimage_interval)
+		afterimage_time_left += max(0.01, effective_interval)
 
 func _create_afterimage_sprite() -> void:
 	# Hand the current frame textures to the dash VFX helper so the ghost matches the player state.
@@ -263,6 +361,7 @@ func _play_anim(anim_name: StringName) -> void:
 func _sync_skin_to_base() -> void:
 	# Mirror the base sprite's position, scale, and frame state so the overlay stays aligned.
 	if skin_sprite == null:
+		_sync_weapon_to_base()
 		return
 	skin_sprite.position = sprite.position + skin_overlay_offset
 	skin_sprite.scale = sprite.scale
@@ -270,6 +369,7 @@ func _sync_skin_to_base() -> void:
 		skin_sprite.play(sprite.animation)
 	skin_sprite.frame = sprite.frame
 	skin_sprite.frame_progress = sprite.frame_progress
+	_sync_weapon_to_base()
 
 func _setup_hp_bar() -> void:
 	# Build a simple two-line HP bar above the player for immediate combat readability.

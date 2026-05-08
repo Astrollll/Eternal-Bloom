@@ -3,6 +3,7 @@
 [ext_resource type="Script" uid="uid://uf3yhi0kq6c" path="res://scripts/Player.gd" id="1_4n6xq"]
 [ext_resource type="Texture2D" uid="uid://b1nserjjqv8ni" path="res://assets/Tiny Wonder Forest 1.0/characters/main character/walk and idle.png" id="2_x3eqw"]
 [ext_resource type="Texture2D" uid="uid://da7eriq5tli1o" path="res://assets/Tiny Wonder Forest 1.0/characters/main character/attack and die.png" id="3_x5r9q"]
+[ext_resource type="Texture2D" uid="uid://bu10oj158ki44" path="res://assets/weapons/Sprite_Gas_Blaster.webp" id="4_gunblaster"]
 
 [sub_resource type="AtlasTexture" id="AtlasTexture_attack_left_0"]
 atlas = ExtResource("3_x5r9q")
@@ -269,6 +270,12 @@ scale = Vector2(2, 2)
 sprite_frames = SubResource("SpriteFrames_9xyg2")
 animation = &"attack_left"
 autoplay = "idle_right"
+
+[node name="GunSprite" type="Sprite2D" parent="." unique_id=1524828851]
+z_index = 2
+position = Vector2(27, 7)
+scale = Vector2(0.24, 0.24)
+texture = ExtResource("4_gunblaster")
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="." unique_id=1752017831]
 position = Vector2(1, 3)

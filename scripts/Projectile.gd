@@ -94,10 +94,17 @@ func set_low_spec_mode(enabled: bool) -> void:
 
 func _apply_low_spec_tuning() -> void:
 	# Reduce expensive projectile visuals when low-spec mode is enabled.
-	ribbon_interval_scale = 1.9 if low_spec_mode else 1.0
-	if trail_particles != null:
-		trail_particles.amount = 34 if low_spec_mode else 64
-		trail_particles.lifetime = 0.24 if low_spec_mode else 0.34
+	# In low-spec mode: disable ribbons entirely, drastically cut particles
+	if low_spec_mode:
+		ribbon_interval_scale = INF # Effectively disables ribbon drawing
+		if trail_particles != null:
+			trail_particles.amount = 16 # More aggressive particle reduction
+			trail_particles.lifetime = 0.12 # Shorter trail
+	else:
+		ribbon_interval_scale = 1.0
+		if trail_particles != null:
+			trail_particles.amount = 64
+			trail_particles.lifetime = 0.34
 
 func _start_visual_motion() -> void:
 	# Give each visible layer an additive material so it reads like a bright orb or slash.
@@ -249,6 +256,9 @@ func _target_proximity() -> float:
 
 func _animate_bullet_shape(t: float, proximity: float) -> void:
 	# Use a rhythmic pulse and target proximity to make the projectile feel alive.
+	# Skip shape animations entirely in low-spec mode
+	if low_spec_mode:
+		return
 	var pulse := sin(t * 20.0) * 0.04 + cos(t * 13.0) * 0.03
 	var approach_boost := 1.0 + proximity * 0.38
 	var scale_value := 1.0 + pulse
