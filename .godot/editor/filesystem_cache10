@@ -1,5 +1,5 @@
 63f7b34db8d8cdea90c76aacccf841ec
-::res://::1778238583
+::res://::1778570922
 icon.svg::CompressedTexture2D::3060874518664851737::1777943117::1777943119::1::::<><><>0<>0<>c576ed999b66331ae6dd44394a85467b<>res://.godot/imported/icon.svg-218a8f2b3041327d8a5756f3a245f83b.ctex::
 ::res://assets/::1778238643
 Game Boy Advance - The Legend of Zelda_ The Minish Cap - Playable Characters - Link (Cap).png::CompressedTexture2D::6679029193493487068::1777108076::1777108607::1::::<><><>0<>0<>3991532bee31d7cbd4adf22362f572f2<>res://.godot/imported/Game Boy Advance - The Legend of Zelda_ The Minish Cap - Playable Characters - Link (Cap).png-bf2012a665f791a7cd0ecf9b5d94d41d.ctex::
@@ -34,38 +34,40 @@ furniture.png::CompressedTexture2D::3247293438674819441::1666249722::1777108607:
 objects.png::CompressedTexture2D::8278549303692200105::1666250438::1777108607::1::::<><><>0<>0<>944bd14cfc6669ae625e6025028e5fda<>res://.godot/imported/objects.png-9eb6d90e75a7d468f0ed36f286388a36.ctex::
 summer and spring items.png::CompressedTexture2D::8965645196237747067::1666260372::1777108607::1::::<><><>0<>0<>8c51d0d0b23905c4bd36e547627b6300<>res://.godot/imported/summer and spring items.png-38a9cc2c8807ac9ca04a855f71e84ee3.ctex::
 winter items.png::CompressedTexture2D::535452752318529878::1666248706::1777108607::1::::<><><>0<>0<>9551b035e89469250cd852c2a55a7b6a<>res://.godot/imported/winter items.png-b9c11e100f0088d4ac4f3f2b9da73539.ctex::
-::res://assets/Tiny Wonder Forest 1.0/tilemaps/::1777875462
-autumn tilemap.png::CompressedTexture2D::5784422857457885043::1677731700::1777875462::1::::<><><>0<>0<>cb2dbe63b801d99bbeb34ef9139fed4a<>res://.godot/imported/autumn tilemap.png-f4375a105b32f3ccd8ad5561f8f58151.ctex::
-bridges.png::CompressedTexture2D::9134589758242311340::1677842128::1777875462::1::::<><><>0<>0<>b3323ec05bfcd3edf984748cb26455d9<>res://.godot/imported/bridges.png-229c1b5a7214f65c7f69cbd8fe19744f.ctex::
-inside.png::CompressedTexture2D::5702662041830268249::1677130508::1777875462::1::::<><><>0<>0<>926a3aed109b4cc634a7e5301d78863f<>res://.godot/imported/inside.png-5849131b8b822a91d722d2e3dfc3cd2a.ctex::
-spring tilemap.png::CompressedTexture2D::206436524451607638::1677663634::1777875462::1::::<><><>0<>0<>c900ec052ec2d7df42134130acf0d724<>res://.godot/imported/spring tilemap.png-a234fc0be131c1bcc42b3545747355c9.ctex::
-summer tilemap.png::CompressedTexture2D::8282034192563820699::1677726776::1777875462::1::::<><><>0<>0<>643ddf9f5b1d3686a6b986a2ce4b248b<>res://.godot/imported/summer tilemap.png-785e14bd5c8b9d4c1d3a06fca6062409.ctex::
-winter outside.png::CompressedTexture2D::1277409717123433551::1677724930::1777875462::1::::<><><>0<>0<>2d8f955c23fcab6e62688e67899409f6<>res://.godot/imported/winter outside.png-203cc03d3934b604be2bd660dfb887e6.ctex::
-::res://assets/Tiny Wonder Forest 1.0/tilemaps/animated tiles/::1677726408
-::res://assets/weapons/::1778238826
+::res://assets/Tiny Wonder Forest 1.0/tilemaps/::1778571884
+autumn tilemap.png::CompressedTexture2D::5784422857457885043::1778571884::1778571984::1::::<><><>0<>0<>cb2dbe63b801d99bbeb34ef9139fed4a<>res://.godot/imported/autumn tilemap.png-f4375a105b32f3ccd8ad5561f8f58151.ctex::
+bridges.png::CompressedTexture2D::9134589758242311340::1778571884::1778571984::1::::<><><>0<>0<>b3323ec05bfcd3edf984748cb26455d9<>res://.godot/imported/bridges.png-229c1b5a7214f65c7f69cbd8fe19744f.ctex::
+inside.png::CompressedTexture2D::5702662041830268249::1778571884::1778571984::1::::<><><>0<>0<>926a3aed109b4cc634a7e5301d78863f<>res://.godot/imported/inside.png-5849131b8b822a91d722d2e3dfc3cd2a.ctex::
+spring tilemap.png::CompressedTexture2D::206436524451607638::1778571884::1778571984::1::::<><><>0<>0<>c900ec052ec2d7df42134130acf0d724<>res://.godot/imported/spring tilemap.png-a234fc0be131c1bcc42b3545747355c9.ctex::
+summer tilemap.png::CompressedTexture2D::8282034192563820699::1778571884::1778571984::1::::<><><>0<>0<>643ddf9f5b1d3686a6b986a2ce4b248b<>res://.godot/imported/summer tilemap.png-785e14bd5c8b9d4c1d3a06fca6062409.ctex::
+winter outside.png::CompressedTexture2D::1277409717123433551::1778571884::1778571984::1::::<><><>0<>0<>2d8f955c23fcab6e62688e67899409f6<>res://.godot/imported/winter outside.png-203cc03d3934b604be2bd660dfb887e6.ctex::
+::res://assets/Tiny Wonder Forest 1.0/tilemaps/animated tiles/::1778571884
+::res://assets/weapons/::1778238974
 Sprite_Gas_Blaster.webp::CompressedTexture2D::3845414818275764279::1778238826::1778238974::1::::<><><>0<>0<>f48259612d6d89aff9b6eec5f030ee22<>res://.godot/imported/Sprite_Gas_Blaster.webp-63c04b0e26690d3712d69102092f792d.ctex::
 ::res://prefabs/::1777105660
-::res://scenes/::1778219738
+::res://scenes/::1778567517
 Bullet.tscn::PackedScene::-1::1777105661::0::1::::<><><>0<>0<><>::
 CameraShake.tscn::PackedScene::-1::1777876265::0::1::::<><><>0<>0<><>::res://scripts/modules/CameraShake.gd
 Enemy.tscn::PackedScene::-1::1777941904::0::1::::<><><>0<>0<><>::res://scripts/Enemy.gd
 ImpactBurst.tscn::PackedScene::-1::1777876257::0::1::::<><><>0<>0<><>::res://scripts/modules/ImpactBurst.gd
-Main.tscn::PackedScene::6437221966067421414::1777945067::0::1::::<><><>0<>0<><>::uid://ch8caas03dhl::::res://scenes/player.tscn<>res://scenes/Enemy.tscn
+Main.tscn::PackedScene::6437221966067421414::1778569878::0::1::::<><><>0<>0<><>::res://scripts/Main.gd<>uid://ch8caas03dhl::::res://scenes/player.tscn<>res://scenes/Enemy.tscn
 PetBlueMushroom.tscn::PackedScene::2154978992241418693::1777945062::0::1::::<><><>0<>0<><>::uid://c5mbb7aepqcbi::::res://scripts/PetBlueMushroom.gd<>uid://cs7ck31fux15h::::res://assets/Tiny Wonder Forest 1.0/characters/mushrooms/blue mushroom sheet.png
-player.tscn::PackedScene::156835564755936565::1778219738::0::1::::<><><>0<>0<><>::uid://uf3yhi0kq6c::::res://scripts/Player.gd<>uid://b1nserjjqv8ni::::res://assets/Tiny Wonder Forest 1.0/characters/main character/walk and idle.png<>uid://da7eriq5tli1o::::res://assets/Tiny Wonder Forest 1.0/characters/main character/attack and die.png
+player.tscn::PackedScene::156835564755936565::1778567517::0::1::::<><><>0<>0<><>::uid://uf3yhi0kq6c::::res://scripts/Player.gd<>uid://b1nserjjqv8ni::::res://assets/Tiny Wonder Forest 1.0/characters/main character/walk and idle.png<>uid://da7eriq5tli1o::::res://assets/Tiny Wonder Forest 1.0/characters/main character/attack and die.png<>uid://bu10oj158ki44::::res://assets/weapons/Sprite_Gas_Blaster.webp
 Projectile.tscn::PackedScene::7117943907028898077::1777961027::0::1::::<><><>0<>0<><>::res://scripts/Projectile.gd
 SlashImpact.tscn::PackedScene::-1::1777941536::0::1::::<><><>0<>0<><>::res://scripts/modules/SlashImpact.gd
-::res://scripts/::1777945062
+::res://scripts/::1778569736
 Enemy.gd::GDScript::8484147494113025884::1778217502::0::1::::Enemy<>CharacterBody2D<><>0<>0<><>::
 GameManager.gd::GDScript::2284062296796153061::1778026834::0::1::::<>Node<><>0<>0<><>::
+Main.gd::GDScript::6401406626905616970::1778571922::0::1::::<>Node2D<><>0<>0<><>::
 PetBlueMushroom.gd::GDScript::6903343393312184866::1778026973::0::1::::<>StaticBody2D<><>0<>0<><>::
-Player.gd::GDScript::41642414045703680::1778218991::0::1::::<>CharacterBody2D<><>0<>0<><>::
-Projectile.gd::GDScript::1134398065504854488::1778216658::0::1::::<>Area2D<><>0<>0<><>::
-::res://scripts/modules/::1777876287
+Player.gd::GDScript::41642414045703680::1778569297::0::1::::<>CharacterBody2D<><>0<>0<><>::
+Projectile.gd::GDScript::1134398065504854488::1778241918::0::1::::<>Area2D<><>0<>0<><>::
+::res://scripts/modules/::1778571624
 CameraShake.gd::GDScript::7239410242877211634::1778026834::0::1::::CameraShake<>Node<><>0<>0<><>::
 DashVFX.gd::GDScript::1236918700882416108::1778026834::0::1::::DashVFX<>RefCounted<><>0<>0<><>::
+GameOverUI.gd::GDScript::4693171415604571453::1778569172::0::1::::GameOverUI<>CanvasLayer<><>0<>0<><>::
 ImpactBurst.gd::GDScript::3897548706662492177::1778026834::0::1::::ImpactBurst<>Node2D<><>0<>0<><>::
-PlayerAttack.gd::GDScript::5111484242035789822::1778217618::0::1::::PlayerAttack<>RefCounted<><>0<>0<><>::
+PlayerAttack.gd::GDScript::5111484242035789822::1778568562::0::1::::PlayerAttack<>RefCounted<><>0<>0<><>::
 PlayerCombat.gd::GDScript::8483273822360215352::1778026834::0::1::::PlayerCombat<>RefCounted<><>0<>0<><>::
 PlayerInput.gd::GDScript::1527739082409931082::1778051465::0::1::::PlayerInput<>RefCounted<><>0<>0<><>::
 PlayerSkin.gd::GDScript::7579775280429197831::1778026835::0::1::::PlayerSkin<>RefCounted<><>0<>0<><>::

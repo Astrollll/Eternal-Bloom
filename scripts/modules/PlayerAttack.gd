@@ -177,6 +177,11 @@ static func spawn_projectile(owner: Node2D, direction: Vector2, mask: int, enemy
 
 	var target := _find_player_target(owner) if enemy_style else _find_nearest_enemy(owner)
 	var final_dir := direction.normalized() if direction != Vector2.ZERO else Vector2.RIGHT
+	
+	if target != null and not enemy_style:
+		if (target.global_position - owner.global_position).length() > 500.0:
+			target = null # Too far away, don't home or override aim
+			
 	if target != null:
 		final_dir = (target.global_position - owner.global_position).normalized()
 		if final_dir == Vector2.ZERO:

@@ -24,6 +24,7 @@ const PlayerInputModule = preload("res://scripts/modules/PlayerInput.gd")
 const PlayerCombatModule = preload("res://scripts/modules/PlayerCombat.gd")
 const PlayerSkinModule = preload("res://scripts/modules/PlayerSkin.gd")
 const PlayerAttackModule: Script = preload("res://scripts/modules/PlayerAttack.gd")
+const GameOverUIModule = preload("res://scripts/modules/GameOverUI.gd")
 const FRAME_SIZE: int = 24
 const BASE_ATTACK_TEX: Texture2D = preload("res://assets/Tiny Wonder Forest 1.0/characters/main character/attack and die.png")
 const SKIN_WALK_IDLE_TEX: Texture2D = preload("res://assets/Tiny Wonder Forest 1.0/characters/main character old/cat kigurumi walk and idle.png")
@@ -118,6 +119,34 @@ func _physics_process(delta: float) -> void:
 
 	velocity = direction * speed + knockback_velocity
 	move_and_slide()
+	
+	# Update camera focus towards aim direction / target
+	var camera := get_node_or_null("Camera2D") as Camera2D
+	if camera != null:
+		var target_enemy = _get_nearest_enemy()
+		var target_cam_offset = Vector2.ZERO
+		if target_enemy != null:
+			var to_enemy = target_enemy.global_position - global_position
+			var enemy_dist = to_enemy.length()
+			# Shift the camera slightly towards the enemy if nearby
+			if enemy_dist <= 500.0:
+				target_cam_offset = to_enemy * 0.4
+				# Limit max camera offset
+				if target_cam_offset.length() > 160.0:
+					target_cam_offset = target_cam_offset.normalized() * 160.0
+		camera.position = camera.position.lerp(target_cam_offset, 6.0 * delta)
+
+	# Aim logic updates facing direction if target locked
+	var aim_dir = _get_weapon_aim_direction()
+	if aim_dir.x != 0:
+		facing_right = aim_dir.x > 0.0
+	else:
+		# If aiming vertically, check if there's an enemy nearby to face towards
+		var target_enemy = _get_nearest_enemy()
+		if target_enemy != null:
+			var to_enemy = target_enemy.global_position - global_position
+			if to_enemy.length() <= 500.0 and to_enemy.x != 0:
+				facing_right = to_enemy.x > 0.0
 
 	if direction == Vector2.ZERO:
 		_play_anim("idle_right" if facing_right else "idle_left")
@@ -125,17 +154,15 @@ func _physics_process(delta: float) -> void:
 		return
 
 	if abs(direction.x) >= abs(direction.y):
-		if direction.x > 0.0:
-			facing_right = true
+		if facing_right:
 			_play_anim("walk_left")
 		else:
-			facing_right = false
 			_play_anim("walk_right")
 	else:
-		if direction.y > 0.0:
-			_play_anim("walk_down")
+		if facing_right:
+			_play_anim("walk_left")
 		else:
-			_play_anim("walk_up")
+			_play_anim("walk_right")
 
 	_sync_skin_to_base()
 
@@ -161,8 +188,8 @@ func _start_attack() -> void:
 				)
 		, CONNECT_ONE_SHOT)
 	else:
-		# Otherwise, shoot a projectile in the direction of the target or facing direction
-		var shoot_dir = (target.global_position - global_position).normalized() if target else (Vector2.RIGHT if facing_right else Vector2.LEFT)
+		# Otherwise, shoot a projectile in the direction of the aim logic
+		var shoot_dir = _get_weapon_aim_direction()
 		PlayerAttackModule.shoot_projectile(self , shoot_dir, attack_collision_mask)
 		is_attacking = false
 
@@ -262,12 +289,20 @@ func _setup_weapon_overlay() -> void:
 	_sync_weapon_to_base()
 
 func _get_weapon_aim_direction() -> Vector2:
-	# Aim at the closest enemy when one exists; otherwise fall back to the current facing.
+	# Aim at the closest enemy when one exists and is nearby; otherwise fall back to the current facing.
 	var target := _get_nearest_enemy()
 	if target != null:
-		var aim := (target.global_position - global_position).normalized()
-		if aim != Vector2.ZERO:
-			return aim
+		var diff := target.global_position - global_position
+		if diff.length() <= 500.0:
+			var aim := diff.normalized()
+			if aim != Vector2.ZERO:
+				return aim
+	
+	# If moving, aim in movement direction
+	var move_input = PlayerInputModule.read_move_input()
+	if move_input != Vector2.ZERO:
+		return move_input.normalized()
+		
 	return Vector2.RIGHT if facing_right else Vector2.LEFT
 
 func _sync_weapon_to_base() -> void:
@@ -475,7 +510,11 @@ func _start_death_fade() -> void:
 	var fade_tw: Tween = create_tween()
 	fade_tw.tween_interval(0.15)
 	fade_tw.tween_property(self , "modulate:a", 0.0, 0.35)
-	fade_tw.tween_callback(queue_free)
+	fade_tw.tween_callback(func():
+		var ui = GameOverUIModule.new()
+		get_tree().current_scene.add_child(ui)
+		queue_free()
+	)
 
 func on_hit_by_enemy(amount: int, direction: Vector2 = Vector2.ZERO) -> void:
 	# Expose a uniform enemy-hit entry point so combat helpers can damage the player consistently.
