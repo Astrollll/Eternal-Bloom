@@ -1,0 +1,26 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/modules/SlashImpact.gd" id="1_slash"]
+
+[node name="SlashImpact" type="Node2D"]
+script = ExtResource("1_slash")
+
+[node name="MainSlash" type="Line2D" parent="."]
+width = 2.0
+default_color = Color(1, 1, 1, 0.95)
+points = PackedVector2Array(-10, -2, 10, 2)
+
+[node name="GlowSlash" type="Line2D" parent="."]
+width = 1.0
+default_color = Color(0.72, 0.9, 1, 0.45)
+points = PackedVector2Array(-7, 1, 7, -1)
+
+[node name="EchoSlash" type="Line2D" parent="."]
+width = 1.4
+default_color = Color(1, 0.88, 0.62, 0.55)
+points = PackedVector2Array(-13, 3, 13, -3)
+
+[node name="CoreSlash" type="Line2D" parent="."]
+width = 0.8
+default_color = Color(1, 1, 1, 0.9)
+points = PackedVector2Array(-6, 0, 6, 0)
