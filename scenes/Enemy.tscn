@@ -1,54 +1,15 @@
-[gd_scene format=3 load_steps=3 uid="uid://duy0d5pqhpgrh"]
+[gd_scene format=3 uid="uid://duy0d5pqhpgrh"]
 
 [ext_resource type="Script" path="res://scripts/Enemy.gd" id="1_enemy"]
-[ext_resource type="Texture2D" uid="uid://bq5w5b0j7fmnm" path="res://assets/Tiny Wonder Forest 1.0/characters/mushrooms/blue mushroom sheet.png" id="2_blue_mushroom"]
 
 [sub_resource type="CapsuleShape2D" id="CapsuleShape2D_enemy"]
 radius = 14.0
 height = 34.0
 
-[sub_resource type="AtlasTexture" id="AtlasTexture_idle_1"]
-atlas = ExtResource("2_blue_mushroom")
-region = Rect2(0, 0, 16, 16)
-
-[sub_resource type="AtlasTexture" id="AtlasTexture_idle_2"]
-atlas = ExtResource("2_blue_mushroom")
-region = Rect2(16, 0, 16, 16)
-
-[sub_resource type="AtlasTexture" id="AtlasTexture_idle_3"]
-atlas = ExtResource("2_blue_mushroom")
-region = Rect2(32, 0, 16, 16)
-
-[sub_resource type="AtlasTexture" id="AtlasTexture_idle_4"]
-atlas = ExtResource("2_blue_mushroom")
-region = Rect2(48, 0, 16, 16)
-
-[sub_resource type="SpriteFrames" id="SpriteFrames_enemy"]
-animations = [{
-"frames": [{
-"duration": 1.0,
-"texture": SubResource("AtlasTexture_idle_1")
-}, {
-"duration": 1.0,
-"texture": SubResource("AtlasTexture_idle_2")
-}, {
-"duration": 1.0,
-"texture": SubResource("AtlasTexture_idle_3")
-}, {
-"duration": 1.0,
-"texture": SubResource("AtlasTexture_idle_4")
-}],
-"loop": true,
-"name": &"idle",
-"speed": 6.0
-}]
-
 [node name="Enemy" type="CharacterBody2D"]
 script = ExtResource("1_enemy")
 
 [node name="AnimatedSprite2D" type="AnimatedSprite2D" parent="."]
-sprite_frames = SubResource("SpriteFrames_enemy")
-animation = &"idle"
 scale = Vector2(2, 2)
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="."]
