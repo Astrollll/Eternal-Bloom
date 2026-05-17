@@ -36,15 +36,8 @@ class_name Enemy
 
 @onready var sprite: AnimatedSprite2D = $AnimatedSprite2D
 
-# Sprite textures (editable in inspector)
-@export var walk_idle_texture: Texture2D = preload("res://assets/Tiny Wonder Forest 1.0/characters/main character old/walk and idle.png")
-@export var attack_texture: Texture2D = preload("res://assets/Tiny Wonder Forest 1.0/characters/main character old/attack and die.png")
-
-# Animation speeds (editable in inspector)
-@export var idle_anim_speed: float = 6.0
-@export var walk_anim_speed: float = 10.0
-@export var attack_anim_speed: float = 14.0
-@export var die_anim_speed: float = 8.0
+# Sprite frames resource (editable in inspector)
+@export var sprite_frames_resource: SpriteFrames
 
 const DashVFXModule = preload("res://scripts/modules/DashVFX.gd")
 const PlayerAttackModule: Script = preload("res://scripts/modules/PlayerAttack.gd")
@@ -74,9 +67,11 @@ var strafe_dir: float = 1.0
 var strafe_timer: float = 0.0
 
 func _ready() -> void:
-	# Register the enemy, build its animation frames, and cache the player reference.
+	# Register the enemy, load its sprite frames resource, and cache the player reference.
 	add_to_group("enemies")
-	_build_sprite_frames()
+	# Use the SpriteFrames assigned in the scene/inspector (no runtime preload)
+	if sprite_frames_resource != null:
+		sprite.sprite_frames = sprite_frames_resource
 	_setup_hp_bar()
 	current_hp = max_hp
 	_update_hp_bar()
@@ -564,31 +559,3 @@ func _update_hp_bar() -> void:
 	var pct: float = clampf(float(current_hp) / float(max(1, max_hp)), 0.0, 1.0)
 	var half_w: float = 17.0
 	hp_bar_fill.points = PackedVector2Array([Vector2(-half_w, 0), Vector2(-half_w + (half_w * 2.0 * pct), 0)])
-
-func _build_sprite_frames() -> void:
-	# Build a complete animation set from the atlas so the enemy can walk, attack, and die.
-	if sprite == null:
-		return
-	var frames: SpriteFrames = SpriteFrames.new()
-	_add_anim(frames, "idle_left", walk_idle_texture, [Vector2i(0, 0), Vector2i(1, 0)], idle_anim_speed, true)
-	_add_anim(frames, "idle_right", walk_idle_texture, [Vector2i(2, 0), Vector2i(3, 0)], idle_anim_speed, true)
-	_add_anim(frames, "walk_down", walk_idle_texture, [Vector2i(0, 1), Vector2i(1, 1), Vector2i(2, 1), Vector2i(3, 1)], walk_anim_speed, true)
-	_add_anim(frames, "walk_up", walk_idle_texture, [Vector2i(0, 2), Vector2i(1, 2), Vector2i(2, 2), Vector2i(3, 2)], walk_anim_speed, true)
-	_add_anim(frames, "walk_left", walk_idle_texture, [Vector2i(4, 2), Vector2i(5, 2), Vector2i(6, 2), Vector2i(7, 2)], walk_anim_speed, true)
-	_add_anim(frames, "walk_right", walk_idle_texture, [Vector2i(4, 1), Vector2i(5, 1), Vector2i(6, 1), Vector2i(7, 1)], walk_anim_speed, true)
-	_add_anim(frames, "attack_left", attack_texture, [Vector2i(0, 0), Vector2i(1, 0), Vector2i(2, 0), Vector2i(3, 0), Vector2i(4, 0)], attack_anim_speed, false)
-	_add_anim(frames, "attack_right", attack_texture, [Vector2i(0, 2), Vector2i(1, 2), Vector2i(2, 2), Vector2i(3, 2), Vector2i(4, 2)], attack_anim_speed, false)
-	_add_anim(frames, "die_left", attack_texture, [Vector2i(0, 1), Vector2i(1, 1), Vector2i(2, 1), Vector2i(3, 1)], die_anim_speed, false)
-	_add_anim(frames, "die_right", attack_texture, [Vector2i(0, 3), Vector2i(1, 3), Vector2i(2, 3), Vector2i(3, 3)], die_anim_speed, false)
-	sprite.sprite_frames = frames
-
-func _add_anim(frames: SpriteFrames, anim_name: StringName, atlas: Texture2D, cells: Array[Vector2i], speed: float, loop: bool) -> void:
-	# Slice each requested cell into an atlas frame and append it to the target animation.
-	frames.add_animation(anim_name)
-	frames.set_animation_speed(anim_name, speed)
-	frames.set_animation_loop(anim_name, loop)
-	for cell in cells:
-		var frame: AtlasTexture = AtlasTexture.new()
-		frame.atlas = atlas
-		frame.region = Rect2(cell.x * 24, cell.y * 24, 24, 24)
-		frames.add_frame(anim_name, frame)
