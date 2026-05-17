@@ -269,6 +269,8 @@ sprite_frames_resource = SubResource("SpriteFrames_1")
 
 [node name="AnimatedSprite2D" type="AnimatedSprite2D" parent="."]
 scale = Vector2(2, 2)
+sprite_frames = SubResource("SpriteFrames_1")
+animation = &"idle_left"
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="."]
 position = Vector2(0, 3)
