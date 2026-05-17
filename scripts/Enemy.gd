@@ -164,6 +164,15 @@ func _physics_process(delta: float) -> void:
 	var dir: Vector2 = to_player.normalized() if dist > 0.001 else Vector2.ZERO
 	var lateral: Vector2 = Vector2(-dir.y, dir.x) * strafe_dir
 	var far_boost: float = 1.0
+	# If the player quickly crosses to the other side, update facing immediately
+	# to avoid a perceptible delay while movement smoothing settles.
+	if dir != Vector2.ZERO and abs(to_player.x) >= abs(to_player.y) and abs(to_player.x) > 8.0:
+		var desired_face: bool = dir.x > 0.0
+		if desired_face != facing_right and facing_lock_time_left <= 0.0:
+			_set_facing(desired_face)
+			# Refresh idle/walk animation to reflect the instant facing change.
+			_play_idle()
+
 	_sync_facing_with_player_if_near(dist)
 
 	if _try_start_projectile_dodge():
