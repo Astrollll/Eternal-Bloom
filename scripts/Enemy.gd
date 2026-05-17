@@ -36,8 +36,16 @@ class_name Enemy
 
 @onready var sprite: AnimatedSprite2D = $AnimatedSprite2D
 
-const WALK_IDLE_TEX: Texture2D = preload("res://assets/Tiny Wonder Forest 1.0/characters/main character old/walk and idle.png")
-const ATTACK_TEX: Texture2D = preload("res://assets/Tiny Wonder Forest 1.0/characters/main character old/attack and die.png")
+# Sprite textures (editable in inspector)
+@export var walk_idle_texture: Texture2D = preload("res://assets/Tiny Wonder Forest 1.0/characters/main character old/walk and idle.png")
+@export var attack_texture: Texture2D = preload("res://assets/Tiny Wonder Forest 1.0/characters/main character old/attack and die.png")
+
+# Animation speeds (editable in inspector)
+@export var idle_anim_speed: float = 6.0
+@export var walk_anim_speed: float = 10.0
+@export var attack_anim_speed: float = 14.0
+@export var die_anim_speed: float = 8.0
+
 const DashVFXModule = preload("res://scripts/modules/DashVFX.gd")
 const PlayerAttackModule: Script = preload("res://scripts/modules/PlayerAttack.gd")
 
@@ -562,16 +570,16 @@ func _build_sprite_frames() -> void:
 	if sprite == null:
 		return
 	var frames: SpriteFrames = SpriteFrames.new()
-	_add_anim(frames, "idle_left", WALK_IDLE_TEX, [Vector2i(0, 0), Vector2i(1, 0)], 6.0, true)
-	_add_anim(frames, "idle_right", WALK_IDLE_TEX, [Vector2i(2, 0), Vector2i(3, 0)], 6.0, true)
-	_add_anim(frames, "walk_down", WALK_IDLE_TEX, [Vector2i(0, 1), Vector2i(1, 1), Vector2i(2, 1), Vector2i(3, 1)], 10.0, true)
-	_add_anim(frames, "walk_up", WALK_IDLE_TEX, [Vector2i(0, 2), Vector2i(1, 2), Vector2i(2, 2), Vector2i(3, 2)], 10.0, true)
-	_add_anim(frames, "walk_left", WALK_IDLE_TEX, [Vector2i(4, 2), Vector2i(5, 2), Vector2i(6, 2), Vector2i(7, 2)], 10.0, true)
-	_add_anim(frames, "walk_right", WALK_IDLE_TEX, [Vector2i(4, 1), Vector2i(5, 1), Vector2i(6, 1), Vector2i(7, 1)], 10.0, true)
-	_add_anim(frames, "attack_left", ATTACK_TEX, [Vector2i(0, 0), Vector2i(1, 0), Vector2i(2, 0), Vector2i(3, 0), Vector2i(4, 0)], 14.0, false)
-	_add_anim(frames, "attack_right", ATTACK_TEX, [Vector2i(0, 2), Vector2i(1, 2), Vector2i(2, 2), Vector2i(3, 2), Vector2i(4, 2)], 14.0, false)
-	_add_anim(frames, "die_left", ATTACK_TEX, [Vector2i(0, 1), Vector2i(1, 1), Vector2i(2, 1), Vector2i(3, 1)], 8.0, false)
-	_add_anim(frames, "die_right", ATTACK_TEX, [Vector2i(0, 3), Vector2i(1, 3), Vector2i(2, 3), Vector2i(3, 3)], 8.0, false)
+	_add_anim(frames, "idle_left", walk_idle_texture, [Vector2i(0, 0), Vector2i(1, 0)], idle_anim_speed, true)
+	_add_anim(frames, "idle_right", walk_idle_texture, [Vector2i(2, 0), Vector2i(3, 0)], idle_anim_speed, true)
+	_add_anim(frames, "walk_down", walk_idle_texture, [Vector2i(0, 1), Vector2i(1, 1), Vector2i(2, 1), Vector2i(3, 1)], walk_anim_speed, true)
+	_add_anim(frames, "walk_up", walk_idle_texture, [Vector2i(0, 2), Vector2i(1, 2), Vector2i(2, 2), Vector2i(3, 2)], walk_anim_speed, true)
+	_add_anim(frames, "walk_left", walk_idle_texture, [Vector2i(4, 2), Vector2i(5, 2), Vector2i(6, 2), Vector2i(7, 2)], walk_anim_speed, true)
+	_add_anim(frames, "walk_right", walk_idle_texture, [Vector2i(4, 1), Vector2i(5, 1), Vector2i(6, 1), Vector2i(7, 1)], walk_anim_speed, true)
+	_add_anim(frames, "attack_left", attack_texture, [Vector2i(0, 0), Vector2i(1, 0), Vector2i(2, 0), Vector2i(3, 0), Vector2i(4, 0)], attack_anim_speed, false)
+	_add_anim(frames, "attack_right", attack_texture, [Vector2i(0, 2), Vector2i(1, 2), Vector2i(2, 2), Vector2i(3, 2), Vector2i(4, 2)], attack_anim_speed, false)
+	_add_anim(frames, "die_left", attack_texture, [Vector2i(0, 1), Vector2i(1, 1), Vector2i(2, 1), Vector2i(3, 1)], die_anim_speed, false)
+	_add_anim(frames, "die_right", attack_texture, [Vector2i(0, 3), Vector2i(1, 3), Vector2i(2, 3), Vector2i(3, 3)], die_anim_speed, false)
 	sprite.sprite_frames = frames
 
 func _add_anim(frames: SpriteFrames, anim_name: StringName, atlas: Texture2D, cells: Array[Vector2i], speed: float, loop: bool) -> void:
