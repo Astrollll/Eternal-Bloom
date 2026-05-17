@@ -99,7 +99,10 @@ func _face_toward(direction: Vector2) -> void:
 func _play_facing_anim(left_anim: StringName, right_anim: StringName) -> void:
 	# Pick the correct directional animation instead of flipping a single pose everywhere.
 	# The sprite rows are authored mirrored to their names, so use the opposite row for true facing.
-	_play_anim(left_anim if facing_right else right_anim)
+	# Choose the animation that matches the `facing_right` state (right when true).
+	_play_anim(right_anim if facing_right else left_anim)
+
+	# Keep flipping off by default; per-animation code can override if necessary.
 	sprite.flip_h = false
 
 
