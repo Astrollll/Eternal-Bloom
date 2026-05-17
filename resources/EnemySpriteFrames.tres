@@ -1,93 +1,94 @@
-[gd_resource type="SpriteFrames" format=3 uid="uid://dspfjf2r7hjsyufa"]
+[gd_resource type="SpriteFrames" load_steps=3 format=3 uid="uid://dspfjf2r7hjsyufa"]
 
-[resource]
+[ext_resource type="Texture2D" uid="uid://chmv6oijvsgxc" path="res://assets/Tiny Wonder Forest 1.0/characters/main character old/walk and idle.png"]
+[ext_resource type="Texture2D" uid="uid://c5gp8j2y1mfgq" path="res://assets/Tiny Wonder Forest 1.0/characters/main character old/attack and die.png"]
 
 [sub_resource type="AtlasTexture" id="AtlasTexture_1"]
-atlas = preload("res://assets/Tiny Wonder Forest 1.0/characters/main character old/walk and idle.png")
+atlas = ExtResource("ext_1")
 region = Rect2(0, 0, 24, 24)
 
 [sub_resource type="AtlasTexture" id="AtlasTexture_2"]
-atlas = preload("res://assets/Tiny Wonder Forest 1.0/characters/main character old/walk and idle.png")
+atlas = ExtResource("ext_1")
 region = Rect2(24, 0, 24, 24)
 
 [sub_resource type="AtlasTexture" id="AtlasTexture_3"]
-atlas = preload("res://assets/Tiny Wonder Forest 1.0/characters/main character old/walk and idle.png")
+atlas = ExtResource("ext_1")
 region = Rect2(48, 0, 24, 24)
 
 [sub_resource type="AtlasTexture" id="AtlasTexture_4"]
-atlas = preload("res://assets/Tiny Wonder Forest 1.0/characters/main character old/walk and idle.png")
+atlas = ExtResource("ext_1")
 region = Rect2(72, 0, 24, 24)
 
 [sub_resource type="AtlasTexture" id="AtlasTexture_5"]
-atlas = preload("res://assets/Tiny Wonder Forest 1.0/characters/main character old/walk and idle.png")
+atlas = ExtResource("ext_1")
 region = Rect2(0, 24, 24, 24)
 
 [sub_resource type="AtlasTexture" id="AtlasTexture_6"]
-atlas = preload("res://assets/Tiny Wonder Forest 1.0/characters/main character old/walk and idle.png")
+atlas = ExtResource("ext_1")
 region = Rect2(24, 24, 24, 24)
 
 [sub_resource type="AtlasTexture" id="AtlasTexture_7"]
-atlas = preload("res://assets/Tiny Wonder Forest 1.0/characters/main character old/walk and idle.png")
+atlas = ExtResource("ext_1")
 region = Rect2(48, 24, 24, 24)
 
 [sub_resource type="AtlasTexture" id="AtlasTexture_8"]
-atlas = preload("res://assets/Tiny Wonder Forest 1.0/characters/main character old/walk and idle.png")
+atlas = ExtResource("ext_1")
 region = Rect2(72, 24, 24, 24)
 
 [sub_resource type="AtlasTexture" id="AtlasTexture_9"]
-atlas = preload("res://assets/Tiny Wonder Forest 1.0/characters/main character old/walk and idle.png")
+atlas = ExtResource("ext_1")
 region = Rect2(0, 48, 24, 24)
 
 [sub_resource type="AtlasTexture" id="AtlasTexture_10"]
-atlas = preload("res://assets/Tiny Wonder Forest 1.0/characters/main character old/walk and idle.png")
+atlas = ExtResource("ext_1")
 region = Rect2(24, 48, 24, 24)
 
 [sub_resource type="AtlasTexture" id="AtlasTexture_11"]
-atlas = preload("res://assets/Tiny Wonder Forest 1.0/characters/main character old/walk and idle.png")
+atlas = ExtResource("ext_1")
 region = Rect2(48, 48, 24, 24)
 
 [sub_resource type="AtlasTexture" id="AtlasTexture_12"]
-atlas = preload("res://assets/Tiny Wonder Forest 1.0/characters/main character old/walk and idle.png")
+atlas = ExtResource("ext_1")
 region = Rect2(72, 48, 24, 24)
 
 [sub_resource type="AtlasTexture" id="AtlasTexture_13"]
-atlas = preload("res://assets/Tiny Wonder Forest 1.0/characters/main character old/attack and die.png")
+atlas = ExtResource("ext_2")
 region = Rect2(0, 0, 24, 24)
 
 [sub_resource type="AtlasTexture" id="AtlasTexture_14"]
-atlas = preload("res://assets/Tiny Wonder Forest 1.0/characters/main character old/attack and die.png")
+atlas = ExtResource("ext_2")
 region = Rect2(24, 0, 24, 24)
 
 [sub_resource type="AtlasTexture" id="AtlasTexture_15"]
-atlas = preload("res://assets/Tiny Wonder Forest 1.0/characters/main character old/attack and die.png")
+atlas = ExtResource("ext_2")
 region = Rect2(48, 0, 24, 24)
 
 [sub_resource type="AtlasTexture" id="AtlasTexture_16"]
-atlas = preload("res://assets/Tiny Wonder Forest 1.0/characters/main character old/attack and die.png")
+atlas = ExtResource("ext_2")
 region = Rect2(72, 0, 24, 24)
 
 [sub_resource type="AtlasTexture" id="AtlasTexture_17"]
-atlas = preload("res://assets/Tiny Wonder Forest 1.0/characters/main character old/attack and die.png")
+atlas = ExtResource("ext_2")
 region = Rect2(96, 0, 24, 24)
 
 [sub_resource type="AtlasTexture" id="AtlasTexture_18"]
-atlas = preload("res://assets/Tiny Wonder Forest 1.0/characters/main character old/attack and die.png")
+atlas = ExtResource("ext_2")
 region = Rect2(0, 24, 24, 24)
 
 [sub_resource type="AtlasTexture" id="AtlasTexture_19"]
-atlas = preload("res://assets/Tiny Wonder Forest 1.0/characters/main character old/attack and die.png")
+atlas = ExtResource("ext_2")
 region = Rect2(0, 72, 24, 24)
 
 [sub_resource type="AtlasTexture" id="AtlasTexture_20"]
-atlas = preload("res://assets/Tiny Wonder Forest 1.0/characters/main character old/attack and die.png")
+atlas = ExtResource("ext_2")
 region = Rect2(24, 72, 24, 24)
 
 [sub_resource type="AtlasTexture" id="AtlasTexture_21"]
-atlas = preload("res://assets/Tiny Wonder Forest 1.0/characters/main character old/attack and die.png")
+atlas = ExtResource("ext_2")
 region = Rect2(48, 72, 24, 24)
 
 [sub_resource type="AtlasTexture" id="AtlasTexture_22"]
-atlas = preload("res://assets/Tiny Wonder Forest 1.0/characters/main character old/attack and die.png")
+atlas = ExtResource("ext_2")
 region = Rect2(72, 72, 24, 24)
 
 [resource]
