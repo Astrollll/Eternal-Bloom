@@ -1,46 +1,60 @@
 [gd_scene format=3 uid="uid://c8n8q4u2p1k7v"]
 
-[ext_resource type="Script" path="res://scripts/Projectile.gd" id="1_script"]
+[ext_resource type="Script" uid="uid://qfrmugirdamy" path="res://scripts/Projectile.gd" id="1_script"]
 
 [sub_resource type="CircleShape2D" id="CircleShape2D_1"]
 radius = 4.0
 
-[node name="Projectile" type="Area2D"]
+[sub_resource type="ParticleProcessMaterial" id="ParticleProcessMaterial_trail"]
+direction = Vector3(-1, 0, 0)
+spread = 14.0
+initial_velocity_min = 68.0
+initial_velocity_max = 148.0
+angular_velocity_min = -10.0
+angular_velocity_max = 10.0
+gravity = Vector3(0, 0, 0)
+scale_min = 0.34
+scale_max = 0.78
+hue_variation_min = -0.03
+hue_variation_max = 0.03
+
+[node name="Projectile" type="Area2D" unique_id=174182299]
 collision_layer = 0
-collision_mask = 1
 script = ExtResource("1_script")
 
-[node name="CollisionShape2D" type="CollisionShape2D" parent="." id="CollisionShape2D_1"]
+[node name="CollisionShape2D" type="CollisionShape2D" parent="." unique_id=1304835408]
 shape = SubResource("CircleShape2D_1")
 
-[node name="BulletVisual" type="Polygon2D" parent="." id="Polygon2D_1"]
+[node name="BulletVisual" type="Polygon2D" parent="." unique_id=1410876894]
 color = Color(0.38, 1, 0.34, 0.95)
 
-[node name="GlowVisual" type="Polygon2D" parent="." id="Polygon2D_2"]
+[node name="GlowVisual" type="Polygon2D" parent="." unique_id=607881463]
 color = Color(0.78, 1, 0.58, 0.25)
 
-[node name="EnemyBulletLine" type="Line2D" parent="." id="Line2D_1"]
+[node name="EnemyBulletLine" type="Line2D" parent="." unique_id=955751643]
 visible = false
+points = PackedVector2Array(-14, 0, -8, 0, 8, 0, 14, 0)
 width = 4.0
 default_color = Color(1, 0.28, 0.26, 0.92)
-points = PackedVector2Array(-14, 0, -8, 0, 8, 0, 14, 0)
+joint_mode = 2
 begin_cap_mode = 2
 end_cap_mode = 2
-joint_mode = 2
 
-[node name="EnemyBulletGlow" type="Line2D" parent="." id="Line2D_2"]
+[node name="EnemyBulletGlow" type="Line2D" parent="." unique_id=596837780]
 visible = false
+points = PackedVector2Array(-18, 0, -10, 0, 10, 0, 18, 0)
 width = 8.0
 default_color = Color(1, 0.58, 0.5, 0.24)
-points = PackedVector2Array(-18, 0, -10, 0, 10, 0, 18, 0)
+joint_mode = 2
 begin_cap_mode = 2
 end_cap_mode = 2
-joint_mode = 2
 
-[node name="TrailParticles" type="GPUParticles2D" parent="." id="GPUParticles2D_1"]
+[node name="TrailParticles" type="GPUParticles2D" parent="." unique_id=1483462374]
+z_index = -1
+z_as_relative = false
 emitting = false
-lifetime = 0.34
-explosiveness = 0.0
 amount = 64
-one_shot = false
+lifetime = 0.34
+speed_scale = 1.35
 local_coords = true
+process_material = SubResource("ParticleProcessMaterial_trail")

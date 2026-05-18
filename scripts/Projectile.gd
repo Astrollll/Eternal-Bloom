@@ -31,6 +31,12 @@ var _projectile_style: StringName = &"player"
 var _ribbon_points: PackedVector2Array = PackedVector2Array()
 var _ribbon_glow_material: CanvasItemMaterial
 
+# Cached defaults for low-spec scaling
+var _trail_default_amount: int = 0
+var _trail_default_lifetime: float = 0.0
+var _trail_default_speed_scale: float = 0.0
+var _ribbon_interval_default: float = 1.0
+
 func _ready() -> void:
 	# Set up collision, visuals, particles, and the initial motion state.
 	# The projectile is also given a safety timer so it cannot live forever if it misses.
@@ -96,15 +102,21 @@ func _apply_low_spec_tuning() -> void:
 	# Reduce expensive projectile visuals when low-spec mode is enabled.
 	# In low-spec mode: disable ribbons entirely, drastically cut particles
 	if low_spec_mode:
+		# Disable ribbons but remember previous interval scale
+		_ribbon_interval_default = _ribbon_interval_default if _ribbon_interval_default != 1.0 else ribbon_interval_scale
 		ribbon_interval_scale = INF # Effectively disables ribbon drawing
 		if trail_particles != null:
-			trail_particles.amount = 16 # More aggressive particle reduction
-			trail_particles.lifetime = 0.12 # Shorter trail
+			# Scale down from cached defaults when available, otherwise use safe fallbacks
+			trail_particles.amount = max(1, int(_trail_default_amount * 0.25)) if _trail_default_amount > 0 else 16
+			trail_particles.lifetime = (_trail_default_lifetime * 0.35) if _trail_default_lifetime > 0.0 else 0.12
+			trail_particles.speed_scale = (_trail_default_speed_scale * 0.6) if _trail_default_speed_scale > 0.0 else 0.6
 	else:
-		ribbon_interval_scale = 1.0
+		# Restore ribbon and particle values from cached defaults when possible
+		ribbon_interval_scale = (_ribbon_interval_default if _ribbon_interval_default != INF else 1.0)
 		if trail_particles != null:
-			trail_particles.amount = 64
-			trail_particles.lifetime = 0.34
+			trail_particles.amount = (_trail_default_amount if _trail_default_amount > 0 else 64)
+			trail_particles.lifetime = (_trail_default_lifetime if _trail_default_lifetime > 0.0 else 0.34)
+			trail_particles.speed_scale = (_trail_default_speed_scale if _trail_default_speed_scale > 0.0 else 1.35)
 
 func _start_visual_motion() -> void:
 	# Give each visible layer an additive material so it reads like a bright orb or slash.
@@ -188,31 +200,37 @@ func _setup_trail_particles() -> void:
 		trail_particles.name = "TrailParticles"
 		add_child(trail_particles)
 
-	# Configure a short-lived streak that reacts to style and proximity.
+	# Configure using scene/node defaults where available, only create missing resources.
 	trail_particles.emitting = true
-	trail_particles.amount = 64
-	trail_particles.lifetime = 0.34
-	trail_particles.one_shot = false
-	trail_particles.local_coords = true
-	trail_particles.z_index = -1
-	trail_particles.z_as_relative = false
-	trail_particles.speed_scale = 1.35
-	trail_particles.texture = _get_trail_texture()
+	# Respect any values set on the node in the scene; only provide texture and material if missing.
+	if trail_particles.texture == null:
+		trail_particles.texture = _get_trail_texture()
 
-	var mat := ParticleProcessMaterial.new()
-	mat.direction = Vector3(-1.0, 0.0, 0.0)
-	mat.spread = 14.0
-	mat.gravity = Vector3.ZERO
-	mat.initial_velocity_min = 68.0
-	mat.initial_velocity_max = 148.0
-	mat.angular_velocity_min = -10.0
-	mat.angular_velocity_max = 10.0
-	mat.scale_min = 0.34
-	mat.scale_max = 0.78
-	mat.hue_variation_min = -0.03
-	mat.hue_variation_max = 0.03
-	mat.color = Color(1.0, 1.0, 1.0, 1.0)
-	trail_particles.process_material = mat
+	if trail_particles.process_material == null:
+		var mat := ParticleProcessMaterial.new()
+		mat.direction = Vector3(-1.0, 0.0, 0.0)
+		mat.spread = 14.0
+		mat.gravity = Vector3.ZERO
+		mat.initial_velocity_min = 68.0
+		mat.initial_velocity_max = 148.0
+		mat.angular_velocity_min = -10.0
+		mat.angular_velocity_max = 10.0
+		mat.scale_min = 0.34
+		mat.scale_max = 0.78
+		mat.hue_variation_min = -0.03
+		mat.hue_variation_max = 0.03
+		mat.color = Color(1.0, 1.0, 1.0, 1.0)
+		trail_particles.process_material = mat
+
+
+	# Cache node defaults so low-spec tuning can scale/restore them instead of hard-setting values
+	if _trail_default_amount == 0:
+		if trail_particles != null:
+			_trail_default_amount = int(trail_particles.amount)
+			_trail_default_lifetime = float(trail_particles.lifetime)
+			# speed_scale may not exist in very old scenes; guard access
+			_trail_default_speed_scale = float(trail_particles.speed_scale) if "speed_scale" in trail_particles else 1.0
+
 	_apply_trail_style()
 
 func _get_trail_texture() -> Texture2D:

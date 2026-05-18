@@ -2,6 +2,8 @@ extends CharacterBody2D
 
 @export var speed: float = 250.0
 @export var skin_overlay_offset: Vector2 = Vector2.ZERO
+@export var skin_walk_idle_texture: Texture2D = preload("res://assets/Tiny Wonder Forest 1.0/characters/main character old/cat kigurumi walk and idle.png")
+@export var skin_attack_texture: Texture2D = preload("res://assets/Tiny Wonder Forest 1.0/characters/main character/cat kigurumi attack and die.png")
 @export var dash_speed: float = 820.0
 @export var dash_duration: float = 0.14
 @export var dash_cooldown: float = 0.45
@@ -32,8 +34,6 @@ const PlayerAttackModule: Script = preload("res://scripts/modules/PlayerAttack.g
 const GameOverUIModule = preload("res://scripts/modules/GameOverUI.gd")
 const FRAME_SIZE: int = 24
 const BASE_ATTACK_TEX: Texture2D = preload("res://assets/Tiny Wonder Forest 1.0/characters/main character/attack and die.png")
-const SKIN_WALK_IDLE_TEX: Texture2D = preload("res://assets/Tiny Wonder Forest 1.0/characters/main character old/cat kigurumi walk and idle.png")
-const SKIN_ATTACK_TEX: Texture2D = preload("res://assets/Tiny Wonder Forest 1.0/characters/main character/cat kigurumi attack and die.png")
 const GUN_TEX: Texture2D = preload("res://assets/weapons/Sprite_Gas_Blaster.webp")
 
 var facing_right: bool = true
@@ -92,7 +92,7 @@ func _physics_process(delta: float) -> void:
 		if skin_sprite and skin_sprite.visible:
 			change_skin(null, null) # Swaps back to base character
 		else:
-			change_skin(SKIN_WALK_IDLE_TEX, SKIN_ATTACK_TEX) # Swaps to Cat Kigurumi
+			change_skin(skin_walk_idle_texture, skin_attack_texture) # Swaps to assigned skin
 
 	if Input.is_action_just_pressed("dash") and _can_start_dash():
 		_start_dash()
@@ -266,7 +266,7 @@ func _get_nearest_enemy() -> Node2D:
 	return nearest
 
 func _setup_skin_overlay() -> void:
-	# Create or configure the optional skin overlay so it mirrors the base sprite exactly.
+	# Get the SkinOverlay node from the scene; it has embedded sprite frames by default.
 	# Skip skin setup in low-spec mode to save memory and rendering cost
 	if low_spec_vfx_mode:
 		return
@@ -276,8 +276,12 @@ func _setup_skin_overlay() -> void:
 		skin_sprite.name = "SkinOverlay"
 		add_child(skin_sprite)
 
+	# Use scene-embedded SpriteFrames if available; otherwise build from @export textures
 	if skin_sprite.sprite_frames == null:
-		skin_sprite.sprite_frames = PlayerSkinModule.build_skin_frames(SKIN_WALK_IDLE_TEX, SKIN_ATTACK_TEX)
+		if skin_walk_idle_texture != null and skin_attack_texture != null:
+			skin_sprite.sprite_frames = PlayerSkinModule.build_skin_frames(skin_walk_idle_texture, skin_attack_texture)
+		# If neither scene frames nor @export textures are set, skin stays disabled
+	
 	_ensure_skin_death_animations()
 
 	skin_sprite.scale = sprite.scale
@@ -455,7 +459,7 @@ func _update_hp_bar() -> void:
 
 
 ## Updates the player's skin overlay textures at runtime.
-## Pass null to both to effectively "unequip" the skin.
+## Pass null to both to effectively "unequip" the skin and return to scene-assigned frames if available.
 func change_skin(walk_idle_tex: Texture2D, attack_tex: Texture2D) -> void:
 	# Swap the overlay sprite sheet while preserving the current animation state.
 	if skin_sprite == null:
@@ -463,6 +467,9 @@ func change_skin(walk_idle_tex: Texture2D, attack_tex: Texture2D) -> void:
 
 	if walk_idle_tex == null or attack_tex == null:
 		skin_sprite.visible = false
+		# Restore scene-embedded frames if available
+		if skin_sprite.sprite_frames != null:
+			_sync_skin_to_base()
 		return
 
 	skin_sprite.visible = true
@@ -544,8 +551,8 @@ func _ensure_skin_death_animations() -> void:
 	# Clone death animations onto the overlay sprite so the skin fades with the base character.
 	if skin_sprite == null or skin_sprite.sprite_frames == null:
 		return
-	_replace_death_animation(skin_sprite.sprite_frames, &"die_left", SKIN_ATTACK_TEX, 1)
-	_replace_death_animation(skin_sprite.sprite_frames, &"die_right", SKIN_ATTACK_TEX, 3)
+	_replace_death_animation(skin_sprite.sprite_frames, &"die_left", skin_attack_texture, 1)
+	_replace_death_animation(skin_sprite.sprite_frames, &"die_right", skin_attack_texture, 3)
 
 func _replace_death_animation(frames: SpriteFrames, anim_name: StringName, atlas: Texture2D, row: int) -> void:
 	# Slice a 24x24 row from the atlas into a replacement death animation.
