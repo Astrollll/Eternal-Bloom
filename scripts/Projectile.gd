@@ -24,8 +24,6 @@ var _enemy_line_base_points: PackedVector2Array = PackedVector2Array()
 var _enemy_glow_base_points: PackedVector2Array = PackedVector2Array()
 var _life_time: float = 0.0
 var _ribbon_time_left: float = 0.0
-@warning_ignore("unused_private_class_variable")
-var _approach_fx_played: bool = false
 var _trail_texture: Texture2D
 var _projectile_style: StringName = &"player"
 var _ribbon_points: PackedVector2Array = PackedVector2Array()
@@ -362,20 +360,6 @@ func _emit_ribbon(delta: float, proximity: float) -> void:
 	tw.tween_property(ribbon, "scale", Vector2(1.08, 1.08), trail_lifetime)
 	tw.parallel().tween_property(ribbon, "modulate:a", 0.0, trail_lifetime)
 	tw.tween_callback(Callable(ribbon, "queue_free"))
-
-func _play_approach_burst() -> void:
-	# Add a small scale bump when the projectile enters its close-range visual phase.
-	var burst_tw := create_tween()
-	burst_tw.tween_property(self , "scale", Vector2(1.16, 1.16), 0.035)
-	burst_tw.tween_property(self , "scale", Vector2(1.0, 1.0), 0.075)
-	if bullet_visual != null:
-		var bullet_tw := create_tween()
-		bullet_tw.tween_property(bullet_visual, "modulate:a", 1.0, 0.03)
-		bullet_tw.tween_property(bullet_visual, "modulate:a", 0.88, 0.08)
-	if glow_visual != null:
-		var glow_tw := create_tween()
-		glow_tw.tween_property(glow_visual, "modulate:a", 0.42, 0.03)
-		glow_tw.tween_property(glow_visual, "modulate:a", 0.26, 0.08)
 
 func _on_body_entered(body: Node) -> void:
 	# Ignore the shooter, limit player projectiles to enemies, then hand the hit to the callback.

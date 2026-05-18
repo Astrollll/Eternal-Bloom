@@ -88,10 +88,10 @@ func _ready() -> void:
 	restart_btn.add_theme_color_override("font_color", Color(1, 1, 1, 1))
 	restart_btn.add_theme_color_override("font_hover_color", Color(1, 1, 1, 1))
 	restart_btn.add_theme_color_override("font_pressed_color", Color(1, 1, 1, 1))
-	restart_btn.add_theme_stylebox_override("normal", _create_button_style(Color(0.18, 0.44, 0.86), Color(0.58, 0.82, 1.0), 8.0, 1.0))
-	restart_btn.add_theme_stylebox_override("hover", _create_button_style(Color(0.23, 0.56, 0.98), Color(0.8, 0.96, 1.0), 12.0, 1.04))
-	restart_btn.add_theme_stylebox_override("pressed", _create_button_style(Color(0.1, 0.3, 0.7), Color(0.34, 0.62, 0.92), 4.0, 0.98))
-	restart_btn.add_theme_stylebox_override("focus", _create_button_style(Color(0.23, 0.56, 0.98), Color(1.0, 1.0, 1.0), 12.0, 1.04))
+	restart_btn.add_theme_stylebox_override("normal", _create_button_style(Color(0.18, 0.44, 0.86), Color(0.58, 0.82, 1.0), 8.0))
+	restart_btn.add_theme_stylebox_override("hover", _create_button_style(Color(0.23, 0.56, 0.98), Color(0.8, 0.96, 1.0), 12.0))
+	restart_btn.add_theme_stylebox_override("pressed", _create_button_style(Color(0.1, 0.3, 0.7), Color(0.34, 0.62, 0.92), 4.0))
+	restart_btn.add_theme_stylebox_override("focus", _create_button_style(Color(0.23, 0.56, 0.98), Color(1.0, 1.0, 1.0), 12.0))
 	restart_btn_shell.add_child(restart_btn)
 
 	hint_label = Label.new()
@@ -177,7 +177,7 @@ func _create_card_style() -> StyleBoxFlat:
 	style.shadow_color = Color(0, 0, 0, 0.55)
 	return style
 
-func _create_button_style(bg_color: Color, border_color: Color, shadow_size: float, _scale_hint: float) -> StyleBoxFlat:
+func _create_button_style(bg_color: Color, border_color: Color, shadow_size: float) -> StyleBoxFlat:
 	var style := StyleBoxFlat.new()
 	style.bg_color = bg_color
 	style.border_color = border_color
